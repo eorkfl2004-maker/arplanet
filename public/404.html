@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script>
+    // 404 페이지 접속 시 메인으로 리다이렉트 (SPA 라우팅 보조)
+    var path = window.location.pathname + window.location.search + window.location.hash;
+    window.location.replace('/' + '?redirect=' + encodeURIComponent(path));
+  </script>
+</head>
+<body></body>
+</html>
