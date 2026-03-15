@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import ogLogo from "figma:asset/edc2ba40c0534126f7e9e2b23999f44408914b90.png";
+
+const OG_IMAGE_PATH = "/og-image.png";
 
 interface SEOProps {
   title?: string;
@@ -35,7 +36,7 @@ export function SEOHead({
     // 현재 도메인 기반 절대 URL 생성
     const origin = window.location.origin;
     // OG 이미지: 커스텀 이미지가 없으면 /og-image.png (빌드 시 고정 경로)
-    const ogImageSrc = image || ogLogo;
+    const ogImageSrc = image || OG_IMAGE_PATH;
     const absoluteImageUrl = ogImageSrc.startsWith("http") ? ogImageSrc : `${origin}${ogImageSrc.startsWith("/") ? ogImageSrc : `/${ogImageSrc}`}`;
     const siteUrl = url || window.location.href;
 

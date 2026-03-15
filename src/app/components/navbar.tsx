@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import logoImg from "figma:asset/267bebc67e4e69dab18568a32c3ec51338691b77.png";
+
+const LOGO_PATH = "/logo.png";
 
 const navLinks = [
   { label: "ABOUT", href: "/#about" },
@@ -63,7 +64,7 @@ export function Navbar() {
         <div className="w-full px-8 md:px-12 lg:px-16">
           <div className="flex items-center justify-between h-20 md:h-24">
             <Link to="/" className="relative z-10">
-              <img src={logoImg} alt="ARPLANET" className="h-20 md:h-24 w-auto" />
+              <img src={LOGO_PATH} alt="ARPLANET" className="h-20 md:h-24 w-auto" />
             </Link>
 
             <nav className="hidden lg:flex items-center gap-10">

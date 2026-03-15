@@ -1,6 +1,7 @@
 import { Instagram } from "lucide-react";
 import { Link } from "react-router";
-import logoImg from "figma:asset/267bebc67e4e69dab18568a32c3ec51338691b77.png";
+
+const LOGO_PATH = "/logo.png";
 
 export function Footer() {
   return (
@@ -10,7 +11,7 @@ export function Footer() {
         <div className="flex flex-col md:flex-row gap-10 md:gap-8 mb-12">
           {/* Brand */}
           <div className="md:w-1/3">
-            <img src={logoImg} alt="ARPLANET" className="h-16 md:h-20 w-auto mb-3" />
+            <img src={LOGO_PATH} alt="ARPLANET" className="h-16 md:h-20 w-auto mb-3" />
             <p className="text-white/20 tracking-[0.05em]" style={{ fontSize: "11px", fontWeight: 300 }}>
               classical music
             </p>

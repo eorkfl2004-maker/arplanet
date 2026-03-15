@@ -3,9 +3,9 @@ import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import logoImg from "figma:asset/267bebc67e4e69dab18568a32c3ec51338691b77.png";
 import { useData } from "./data-store";
 
+const LOGO_PATH = "/logo.png";
 const ADMIN_ID = "a1004";
 
 export function LoginPage() {
@@ -49,7 +49,7 @@ export function LoginPage() {
       >
         {/* Logo */}
         <div className="text-center mb-12">
-          <img src={logoImg} alt="ARPLANET" className="h-24 w-auto mx-auto" />
+          <img src={LOGO_PATH} alt="ARPLANET" className="h-24 w-auto mx-auto" />
           <p className="text-white/20 mt-3 tracking-[0.15em]" style={{ fontSize: "11px" }}>
             ADMIN LOGIN
           </p>

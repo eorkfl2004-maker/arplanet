@@ -1,7 +1,8 @@
 import { useData } from "./data-store";
 import { useLocation } from "react-router";
 import { useCallback } from "react";
-import kakaoLogo from "figma:asset/8d830c77901ff9a7fd2192da7a23245ca0abe371.png";
+
+const KAKAO_LOGO_PATH = "/kakao-logo.png";
 
 export function KakaoFloatButton() {
   const { kakaoChannelUrl } = useData();
@@ -44,7 +45,7 @@ export function KakaoFloatButton() {
     >
       {/* 모바일: 44x44, 데스크톱: 56x56 */}
       <div className="w-11 h-11 md:w-14 md:h-14 rounded-full overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.3)] group-hover:shadow-[0_6px_24px_rgba(0,0,0,0.4)] group-hover:scale-110 transition-all duration-300">
-        <img src={kakaoLogo} alt="카카오톡 채널" className="w-full h-full object-cover" />
+        <img src={KAKAO_LOGO_PATH} alt="카카오톡 채널" className="w-full h-full object-cover" />
       </div>
       {/* 데스크톱 전용 툴팁 */}
       <div className="absolute bottom-full right-0 mb-2.5 px-3 py-1.5 bg-[#1a1a1a] border border-white/10 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap pointer-events-none hidden md:block">
