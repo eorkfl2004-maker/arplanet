@@ -34,8 +34,8 @@ export function CurrentProjectsSection() {
           initial={{ opacity: 0 }}
           animate={inView ? { opacity: 1 } : {}}
           transition={{ duration: 1 }}
-          className="text-white/30 tracking-[0.3em] md:tracking-[0.4em] mb-3 md:mb-8 text-center"
-          style={{ fontSize: "10px" }}
+          className="text-white/45 tracking-[0.3em] md:tracking-[0.4em] mb-3 md:mb-8 text-center"
+          style={{ fontSize: "11px" }}
         >
           TICKET
         </motion.p>
@@ -46,7 +46,7 @@ export function CurrentProjectsSection() {
             animate={inView ? { y: 0 } : {}}
             transition={{ duration: 1.2, ease: [0.25, 0.1, 0, 1] }}
             className="text-white tracking-[-0.02em]"
-            style={{ fontSize: "clamp(1.2rem, 4vw, 3rem)", fontWeight: 600, lineHeight: 1.2 }}
+            style={{ fontSize: "clamp(1.3rem, 4vw, 3rem)", fontWeight: 600, lineHeight: 1.2 }}
           >
             진행 중인 공연 바로 예매하기
           </motion.h2>
@@ -82,10 +82,10 @@ export function CurrentProjectsSection() {
                   <ImageWithFallback
                     src={toHighRes(project.image)}
                     alt={project.title}
-                    className="w-full h-full object-contain grayscale-[30%] group-hover:grayscale-0 transition-all duration-700"
+                    className="w-full h-full object-contain group-hover:scale-[1.03] transition-all duration-700"
                     style={{ imageRendering: "auto" } as React.CSSProperties}
                   />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/5 transition-colors duration-500" />
+                  <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors duration-500" />
                   {/* Ticket overlay */}
                   <div className="absolute top-2 right-2 md:top-3 md:right-3 flex items-center gap-1 md:gap-1.5 px-2 py-1 md:px-2.5 md:py-1.5 bg-white/10 backdrop-blur-sm border border-white/10 opacity-0 group-hover:opacity-100 transition-all duration-500">
                     <Ticket size={10} className="text-white md:hidden" />
@@ -101,7 +101,7 @@ export function CurrentProjectsSection() {
               <div>
                 <h3
                   className="text-white mb-0.5 md:mb-1 group-hover:text-white/80 transition-colors truncate"
-                  style={{ fontSize: "clamp(0.7rem, 1.8vw, 0.85rem)", fontWeight: 500 }}
+                  style={{ fontSize: "clamp(0.75rem, 1.8vw, 0.95rem)", fontWeight: 500 }}
                 >
                   {project.title}
                 </h3>
@@ -112,7 +112,7 @@ export function CurrentProjectsSection() {
                       <div className="flex items-center gap-1">
                         <Calendar size={9} className="text-white/25 shrink-0 md:hidden" />
                         <Calendar size={10} className="text-white/25 shrink-0 hidden md:block" />
-                        <span className="text-white/50" style={{ fontSize: "clamp(0.55rem, 1.3vw, 0.7rem)", fontWeight: 400 }}>
+                        <span className="text-white/50" style={{ fontSize: "clamp(0.6rem, 1.3vw, 0.75rem)", fontWeight: 400 }}>
                           {project.performanceDate}{project.performanceDay ? ` (${project.performanceDay})` : ""}
                         </span>
                       </div>
@@ -121,7 +121,7 @@ export function CurrentProjectsSection() {
                       <div className="flex items-center gap-1">
                         <Clock size={9} className="text-white/25 shrink-0 md:hidden" />
                         <Clock size={10} className="text-white/25 shrink-0 hidden md:block" />
-                        <span className="text-white/50" style={{ fontSize: "clamp(0.55rem, 1.3vw, 0.7rem)", fontWeight: 400 }}>
+                        <span className="text-white/50" style={{ fontSize: "clamp(0.6rem, 1.3vw, 0.75rem)", fontWeight: 400 }}>
                           {project.performanceTime}
                         </span>
                       </div>
@@ -131,7 +131,7 @@ export function CurrentProjectsSection() {
                 {project.description && (
                   <p
                     className="text-white/30 line-clamp-2 mb-1.5 md:mb-2"
-                    style={{ fontSize: "clamp(0.55rem, 1.2vw, 0.65rem)", fontWeight: 300, lineHeight: 1.6 }}
+                    style={{ fontSize: "clamp(0.6rem, 1.2vw, 0.7rem)", fontWeight: 300, lineHeight: 1.6 }}
                   >
                     {project.description}
                   </p>
@@ -145,7 +145,7 @@ export function CurrentProjectsSection() {
                 >
                   <Ticket size={9} className="text-white/50 md:hidden" />
                   <Ticket size={11} className="text-white/50 hidden md:block" />
-                  <span className="text-white/60 hover:text-white tracking-[0.05em]" style={{ fontSize: "clamp(0.55rem, 1.2vw, 0.65rem)", fontWeight: 400 }}>
+                  <span className="text-white/60 hover:text-white tracking-[0.05em]" style={{ fontSize: "clamp(0.6rem, 1.2vw, 0.7rem)", fontWeight: 400 }}>
                     바로 예매하기
                   </span>
                   <ExternalLink size={7} className="text-white/30 md:hidden" />

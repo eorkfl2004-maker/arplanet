@@ -142,6 +142,27 @@ export interface InstagramPost {
   timestamp: string;
 }
 
+export interface DailyAnalytics {
+  date: string; // YYYY-MM-DD
+  visits: number;
+  uniqueVisitors: number;
+  pages: Record<string, number>;
+}
+
+export interface MonthlyAnalytics {
+  month: string; // YYYY-MM
+  visits: number;
+  uniqueVisitors: number;
+}
+
+export interface AnalyticsData {
+  daily: Record<string, DailyAnalytics>; // key = YYYY-MM-DD
+  monthly: Record<string, MonthlyAnalytics>; // key = YYYY-MM
+  portfolioViews: Record<string, number>; // key = portfolio item id
+  postViews: Record<string, number>; // key = post id
+  totalVisits: number;
+}
+
 interface DataStore {
   heroSlides: HeroSlide[];
   setHeroSlides: React.Dispatch<React.SetStateAction<HeroSlide[]>>;
@@ -179,6 +200,11 @@ interface DataStore {
   setAdminAccounts: React.Dispatch<React.SetStateAction<AdminAccount[]>>;
   instagramToken: string;
   setInstagramToken: React.Dispatch<React.SetStateAction<string>>;
+  analyticsData: AnalyticsData;
+  setAnalyticsData: React.Dispatch<React.SetStateAction<AnalyticsData>>;
+  trackPageView: (path: string) => void;
+  trackPortfolioView: (id: string) => void;
+  trackPostView: (id: string) => void;
   dataLoaded: boolean;
 }
 
@@ -353,6 +379,14 @@ const defaultCurrentProjects: CurrentProject[] = [
 
 const defaultAdminAccounts: AdminAccount[] = [];
 
+const defaultAnalyticsData: AnalyticsData = {
+  daily: {},
+  monthly: {},
+  portfolioViews: {},
+  postViews: {},
+  totalVisits: 0,
+};
+
 // ─── 서버 동기화 커스텀 훅 ───
 function useSyncedState<T>(
   key: string,
@@ -384,12 +418,26 @@ function useSyncedState<T>(
   return [state, setState];
 }
 
+// ─── Analytics 헬퍼 (모듈 스코프) ───
+function getVisitorId(): string {
+  try {
+    let vid = localStorage.getItem("arplanet_vid");
+    if (!vid) {
+      vid = `v_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      localStorage.setItem("arplanet_vid", vid);
+    }
+    return vid;
+  } catch {
+    return `v_${Date.now()}`;
+  }
+}
+
 // ─── 데이터 백업/복원 (Export/Import) ───
 const ALL_KEYS = [
   "heroSlides", "posts", "portfolio", "services", "inquiries",
   "companyInfo", "aboutData", "adminPassword", "artists", "awards",
   "currentProjects", "kakaoChannelUrl", "siteLogo", "kakaoLogo", "ogImage",
-  "adminAccounts", "instagramToken"
+  "adminAccounts", "instagramToken", "analyticsData"
 ];
 
 export async function exportAllData(): Promise<string> {
@@ -441,7 +489,7 @@ export async function importAllData(json: string): Promise<{ success: boolean; m
 
     return { success: true, message: `${count}개 항목이 복원되었습니다. 페이지를 새로고침합니다.` };
   } catch {
-    return { success: false, message: "JSON 파싱에 실패했습니다. 파일을 확인해주세요." };
+    return { success: false, message: "JSON 파싱에 실패했습니다. 파일을 확인해��세요." };
   }
 }
 
@@ -481,6 +529,76 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [ogImage, setOgImage] = useSyncedState<string>("ogImage", "", serverDataRef, hydrated);
   const [adminAccounts, setAdminAccounts] = useSyncedState<AdminAccount[]>("adminAccounts", defaultAdminAccounts, serverDataRef, hydrated);
   const [instagramToken, setInstagramToken] = useSyncedState<string>("instagramToken", "", serverDataRef, hydrated);
+  const [analyticsData, setAnalyticsData] = useSyncedState<AnalyticsData>("analyticsData", defaultAnalyticsData, serverDataRef, hydrated);
+
+  // ─── Analytics 추적 함수 ───
+  const trackPageView = useCallback((path: string) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const thisMonth = today.slice(0, 7); // YYYY-MM
+    const vid = getVisitorId();
+    const sessionKey = `arplanet_session_${today}`;
+    const sessionVisited = sessionStorage.getItem(sessionKey);
+    const isNewVisitor = !sessionVisited;
+    if (!sessionVisited) sessionStorage.setItem(sessionKey, vid);
+
+    // 월별 순방문자 체크
+    const monthSessionKey = `arplanet_month_session_${thisMonth}`;
+    const monthSessionVisited = sessionStorage.getItem(monthSessionKey);
+    const isNewMonthlyVisitor = !monthSessionVisited;
+    if (!monthSessionVisited) sessionStorage.setItem(monthSessionKey, vid);
+
+    setAnalyticsData((prev) => {
+      const daily = { ...prev.daily };
+      const dayData = daily[today] || { date: today, visits: 0, uniqueVisitors: 0, pages: {} };
+      daily[today] = {
+        ...dayData,
+        visits: dayData.visits + 1,
+        uniqueVisitors: isNewVisitor ? dayData.uniqueVisitors + 1 : dayData.uniqueVisitors,
+        pages: { ...dayData.pages, [path]: (dayData.pages[path] || 0) + 1 },
+      };
+
+      // 월별 집계
+      const monthly = { ...prev.monthly };
+      const monthData = monthly[thisMonth] || { month: thisMonth, visits: 0, uniqueVisitors: 0 };
+      monthly[thisMonth] = {
+        ...monthData,
+        visits: monthData.visits + 1,
+        uniqueVisitors: isNewMonthlyVisitor ? monthData.uniqueVisitors + 1 : monthData.uniqueVisitors,
+      };
+
+      // 13개월 이전 월별 데이터 정리 (1년치 보존)
+      const cutoffDate = new Date();
+      cutoffDate.setMonth(cutoffDate.getMonth() - 12);
+      const cutoffMonth = cutoffDate.toISOString().slice(0, 7);
+      Object.keys(monthly).forEach((key) => {
+        if (key < cutoffMonth) delete monthly[key];
+      });
+
+      // 90일 이전 일별 데이터 정리 (3개월치 보존)
+      const cutoffDaily = new Date();
+      cutoffDaily.setDate(cutoffDaily.getDate() - 90);
+      const cutoffDayStr = cutoffDaily.toISOString().slice(0, 10);
+      Object.keys(daily).forEach((key) => {
+        if (key < cutoffDayStr) delete daily[key];
+      });
+
+      return { ...prev, daily, monthly, totalVisits: prev.totalVisits + 1 };
+    });
+  }, [setAnalyticsData]);
+
+  const trackPortfolioView = useCallback((id: string) => {
+    setAnalyticsData((prev) => ({
+      ...prev,
+      portfolioViews: { ...prev.portfolioViews, [id]: (prev.portfolioViews[id] || 0) + 1 },
+    }));
+  }, [setAnalyticsData]);
+
+  const trackPostView = useCallback((id: string) => {
+    setAnalyticsData((prev) => ({
+      ...prev,
+      postViews: { ...prev.postViews, [id]: (prev.postViews[id] || 0) + 1 },
+    }));
+  }, [setAnalyticsData]);
 
   // 서버에서 데이터 로드 (마운트 시 1회)
   useEffect(() => {
@@ -539,7 +657,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       artists, setArtists, awards, setAwards, currentProjects, setCurrentProjects,
       kakaoChannelUrl, setKakaoChannelUrl, siteLogo, setSiteLogo,
       kakaoLogo, setKakaoLogo, ogImage, setOgImage, adminAccounts, setAdminAccounts,
-      instagramToken, setInstagramToken, dataLoaded: hydrated,
+      instagramToken, setInstagramToken, analyticsData, setAnalyticsData,
+      trackPageView, trackPortfolioView, trackPostView,
+      dataLoaded: hydrated,
     }}>
       {children}
     </DataContext.Provider>

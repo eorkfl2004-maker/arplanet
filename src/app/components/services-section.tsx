@@ -16,14 +16,14 @@ export function ServicesSection() {
   };
 
   return (
-    <section id="services" className="bg-black py-16 md:py-28" ref={ref}>
-      <div className="max-w-6xl mx-auto px-6 md:px-12 lg:px-16 mb-10">
+    <section id="services" className="bg-black py-20 md:py-32" ref={ref}>
+      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 mb-12">
         <motion.p
           initial={{ opacity: 0 }}
           animate={inView ? { opacity: 1 } : {}}
           transition={{ duration: 1 }}
-          className="text-white/30 tracking-[0.4em] mb-6"
-          style={{ fontSize: "11px" }}
+          className="text-white/50 tracking-[0.4em] mb-6"
+          style={{ fontSize: "12px" }}
         >
           BUSINESS AREA
         </motion.p>
@@ -44,7 +44,7 @@ export function ServicesSection() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto relative">
+      <div className="max-w-7xl mx-auto relative">
         {services.map((service, i) => {
           const hasLink = service.link && service.link.trim();
           return (
@@ -58,9 +58,9 @@ export function ServicesSection() {
               onClick={() => handleClick(service.link)}
               className={`border-t border-white/10 last:border-b group ${hasLink ? "cursor-pointer" : "cursor-default"}`}
             >
-              <div className="px-6 md:px-12 lg:px-16 py-5 md:py-8 flex items-center justify-between transition-all duration-500 hover:bg-white/[0.02]">
+              <div className="px-6 md:px-12 lg:px-20 py-6 md:py-9 flex items-center justify-between transition-all duration-500 hover:bg-white/[0.03]">
                 <div className="flex items-center gap-4 md:gap-12 flex-1 min-w-0">
-                  <span className="text-white/20 tabular-nums hidden md:block" style={{ fontSize: "13px", fontWeight: 400 }}>
+                  <span className="text-white/20 tabular-nums hidden md:block" style={{ fontSize: "14px", fontWeight: 400 }}>
                     {service.num}
                   </span>
                   <div className="flex-1 min-w-0">
@@ -77,7 +77,7 @@ export function ServicesSection() {
                             ? "bg-white/5 text-white/30"
                             : "bg-white/[0.03] text-white/15"
                         }`}
-                        style={{ fontSize: "9px", fontWeight: 500 }}
+                        style={{ fontSize: "10px", fontWeight: 500 }}
                       >
                         {service.status}
                       </span>
@@ -89,7 +89,7 @@ export function ServicesSection() {
                       className={`text-white/40 transition-opacity duration-500 ${
                         hoveredIdx === i ? "opacity-100" : "opacity-0"
                       }`}
-                      style={{ fontSize: "13px", lineHeight: 1.8 }}
+                      style={{ fontSize: "14px", lineHeight: 1.8 }}
                     >
                       {service.desc}
                     </p>

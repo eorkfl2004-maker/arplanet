@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { useData, type NewsPost, type PortfolioItem, type HeroSlide, type ContentBlock, type ServiceItem, type CompanyInfoData, type AboutData, type ArtistItem, type AwardItem, type CurrentProject, type AdminAccount, type InstagramPost, exportAllData, importAllData, clearAllData } from "./data-store";
+import { AdminAnalytics } from "./admin-analytics";
 import { projectId, publicAnonKey } from "/utils/supabase/info";
 
 type Tab = "dashboard" | "hero" | "about" | "artists" | "currentprojects" | "companyinfo" | "portfolio" | "posts" | "services" | "awards" | "inquiries" | "instagram" | "logos" | "settings";
@@ -234,6 +235,7 @@ export function AdminPage() {
   // Backup/Restore
   const backupFileRef = useRef<HTMLInputElement>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState("");
 
   useEffect(() => { if (!isLoggedIn) navigate("/login"); }, [isLoggedIn, navigate]);
   if (!isLoggedIn) return null;
@@ -472,6 +474,16 @@ export function AdminPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Analytics Section */}
+              <div className="mt-10">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-px flex-1 bg-white/[0.06]" />
+                  <span className="text-white/25 tracking-[0.2em]" style={{ fontSize: "10px", fontWeight: 500 }}>ANALYTICS</span>
+                  <div className="h-px flex-1 bg-white/[0.06]" />
+                </div>
+                <AdminAnalytics />
               </div>
             </div>
           )}
@@ -1520,29 +1532,66 @@ export function AdminPage() {
                     <div className="border-t border-white/[0.04] pt-4 mt-4">
                       {!showResetConfirm ? (
                         <button
-                          onClick={() => setShowResetConfirm(true)}
+                          onClick={() => { setShowResetConfirm(true); setResetConfirmText(""); }}
                           className="flex items-center gap-2 px-4 py-2 text-red-400/50 hover:text-red-400 transition-colors cursor-pointer"
                           style={{ fontSize: "11px" }}
                         >
                           <AlertTriangle size={12} /> 모든 데이터 초기화 (기본값으로 되돌리기)
                         </button>
                       ) : (
-                        <div className="flex items-center gap-3">
-                          <span className="text-red-400/70" style={{ fontSize: "11px" }}>정말 초기화하시겠습니까? 모든 커스텀 데이터가 삭제됩니다.</span>
-                          <button
-                            onClick={async () => { await clearAllData(); toast.success("초기화되었습니다. 새로고침합니다."); setTimeout(() => window.location.reload(), 800); }}
-                            className="px-3 py-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer"
-                            style={{ fontSize: "11px", fontWeight: 500 }}
-                          >
-                            확인
-                          </button>
-                          <button
-                            onClick={() => setShowResetConfirm(false)}
-                            className="px-3 py-1.5 border border-white/[0.08] text-white/30 hover:text-white/60 transition-colors cursor-pointer"
-                            style={{ fontSize: "11px" }}
-                          >
-                            취소
-                          </button>
+                        <div className="space-y-3">
+                          <div className="p-4 bg-red-500/[0.06] border border-red-500/15">
+                            <p className="text-red-400/80 mb-1" style={{ fontSize: "12px", fontWeight: 500 }}>
+                              <AlertTriangle size={12} className="inline mr-1.5 -mt-0.5" />
+                              이 작업은 되돌릴 수 없습니다
+                            </p>
+                            <p className="text-red-400/50" style={{ fontSize: "11px", lineHeight: 1.6 }}>
+                              모든 커스텀 데이터(포트폴리오, 게시글, 아티스트, 히어로 슬라이더, 분석 데이터 등)가 삭제되고 기본값으로 초기화됩니다.
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-white/40 mb-2" style={{ fontSize: "11px" }}>
+                              확인을 위해 아래에 <span className="text-red-400/70 font-mono">모든 데이터 초기화</span>를 정확히 입력하세요.
+                            </p>
+                            <input
+                              type="text"
+                              value={resetConfirmText}
+                              onChange={(e) => setResetConfirmText(e.target.value)}
+                              placeholder="모든 데이터 초기화"
+                              className="w-full px-3 py-2 bg-white/[0.03] border border-white/[0.08] text-white/80 placeholder:text-white/15 focus:outline-none focus:border-red-500/30"
+                              style={{ fontSize: "12px" }}
+                              autoFocus
+                            />
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={async () => {
+                                if (resetConfirmText !== "모든 데이터 초기화") {
+                                  toast.error("입력한 텍스트가 일치하지 않습니다.");
+                                  return;
+                                }
+                                await clearAllData();
+                                toast.success("초기화되었습니다. 새로고침합니다.");
+                                setTimeout(() => window.location.reload(), 800);
+                              }}
+                              disabled={resetConfirmText !== "모든 데이터 초기화"}
+                              className={`px-4 py-2 transition-colors cursor-pointer ${
+                                resetConfirmText === "모든 데이터 초기화"
+                                  ? "bg-red-500/25 text-red-400 hover:bg-red-500/35 border border-red-500/30"
+                                  : "bg-white/[0.02] text-white/15 border border-white/[0.06] cursor-not-allowed"
+                              }`}
+                              style={{ fontSize: "11px", fontWeight: 500 }}
+                            >
+                              초기화 실행
+                            </button>
+                            <button
+                              onClick={() => { setShowResetConfirm(false); setResetConfirmText(""); }}
+                              className="px-4 py-2 border border-white/[0.08] text-white/30 hover:text-white/60 transition-colors cursor-pointer"
+                              style={{ fontSize: "11px" }}
+                            >
+                              취소
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>

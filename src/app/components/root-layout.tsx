@@ -4,11 +4,13 @@ import { Toaster } from "sonner";
 import { KakaoFloatButton } from "./kakao-float-button";
 import { DataProvider } from "./data-store";
 import { SEOHead } from "./seo-head";
+import { AnalyticsTracker } from "./analytics-tracker";
 
 export function RootLayout() {
   return (
     <DataProvider>
       <SEOHead />
+      <AnalyticsTracker />
       <Navbar />
       <Outlet />
       <KakaoFloatButton />

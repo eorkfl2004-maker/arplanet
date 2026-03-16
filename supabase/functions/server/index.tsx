@@ -25,7 +25,7 @@ const ALL_KEYS = [
   "heroSlides", "posts", "portfolio", "services", "inquiries",
   "companyInfo", "aboutData", "adminPassword", "artists", "awards",
   "currentProjects", "kakaoChannelUrl", "siteLogo", "kakaoLogo", "ogImage",
-  "adminAccounts", "instagramToken"
+  "adminAccounts", "instagramToken", "analyticsData"
 ];
 
 // Health check endpoint

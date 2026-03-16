@@ -62,7 +62,7 @@ export function Navbar() {
           scrolled ? "bg-black/80 backdrop-blur-2xl" : "bg-transparent"
         }`}
       >
-        <div className="w-full px-8 md:px-12 lg:px-16">
+        <div className="w-full px-8 md:px-12 lg:px-20">
           <div className="flex items-center justify-between h-20 md:h-24">
             <Link to="/" className="relative z-10">
               <img src={logoSrc} alt="ARPLANET" className="h-20 md:h-24 w-auto" />
@@ -73,8 +73,8 @@ export function Navbar() {
                 <button
                   key={link.label}
                   onClick={() => handleNavClick(link.href)}
-                  className="text-white/60 hover:text-white transition-colors duration-500 tracking-[0.15em] cursor-pointer"
-                  style={{ fontSize: "12px", fontWeight: 400 }}
+                  className="text-white/65 hover:text-white transition-colors duration-500 tracking-[0.15em] cursor-pointer"
+                  style={{ fontSize: "13px", fontWeight: 400 }}
                 >
                   {link.label}
                 </button>
@@ -130,7 +130,7 @@ export function Navbar() {
                     transition={{ duration: 0.3, delay: i * 0.05 }}
                     onClick={() => handleNavClick(link.href)}
                     className="text-left text-white/70 tracking-[0.2em] cursor-pointer hover:text-white hover:bg-white/[0.04] transition-all py-4 px-3 border-b border-white/[0.04]"
-                    style={{ fontSize: "14px", fontWeight: 300 }}
+                    style={{ fontSize: "15px", fontWeight: 300 }}
                   >
                     {link.label}
                   </motion.button>

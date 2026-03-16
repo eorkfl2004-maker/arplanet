@@ -6,16 +6,22 @@ import { ServicesSection } from "./services-section";
 import { AwardsSection } from "./awards-section";
 import { ContactSection } from "./contact-section";
 import { Footer } from "./footer";
+import { SectionDivider } from "./section-divider";
 
 export function LandingPage() {
   return (
     <div className="bg-black min-h-screen">
       <HeroSection />
       <AboutSection />
+      <SectionDivider />
       <PortfolioSection />
+      <SectionDivider />
       <NewsSection />
+      <SectionDivider />
       <ServicesSection />
+      <SectionDivider />
       <AwardsSection />
+      <SectionDivider />
       <ContactSection />
       <Footer />
     </div>

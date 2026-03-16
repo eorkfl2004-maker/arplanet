@@ -16,16 +16,16 @@ export function NewsSection() {
   };
 
   return (
-    <section id="news" className="bg-black py-16 md:py-28" ref={ref}>
-      <div className="max-w-6xl mx-auto px-6 md:px-12 lg:px-16">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
+    <section id="news" className="bg-black py-20 md:py-32" ref={ref}>
+      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
           <div>
             <motion.p
               initial={{ opacity: 0 }}
               animate={inView ? { opacity: 1 } : {}}
               transition={{ duration: 1 }}
-              className="text-white/30 tracking-[0.4em] mb-4"
-              style={{ fontSize: "11px" }}
+              className="text-white/50 tracking-[0.4em] mb-4"
+              style={{ fontSize: "12px" }}
             >
               LATEST NEWS
             </motion.p>
@@ -67,10 +67,10 @@ export function NewsSection() {
                 >
                   <div className="py-5 md:py-7 flex flex-col md:flex-row md:items-center gap-2 md:gap-0 transition-all duration-500 hover:px-4">
                     <div className="flex items-center gap-4 md:w-64 shrink-0">
-                      <span className="text-white/20 tabular-nums" style={{ fontSize: "12px" }}>
+                      <span className="text-white/20 tabular-nums" style={{ fontSize: "13px" }}>
                         {news.date}
                       </span>
-                      <span className="text-white/30 tracking-[0.15em]" style={{ fontSize: "9px", fontWeight: 500 }}>
+                      <span className="text-white/30 tracking-[0.15em]" style={{ fontSize: "10px", fontWeight: 500 }}>
                         {news.category.toUpperCase()}
                       </span>
                     </div>
@@ -86,7 +86,7 @@ export function NewsSection() {
                       </div>
                       <p
                         className="text-white/25 mt-2 hidden md:block max-w-2xl group-hover:text-white/40 transition-colors duration-500"
-                        style={{ fontSize: "13px", lineHeight: 1.7, fontWeight: 300 }}
+                        style={{ fontSize: "14px", lineHeight: 1.7, fontWeight: 300 }}
                       >
                         {news.content}
                       </p>

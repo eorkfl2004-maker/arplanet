@@ -1,4 +1,5 @@
 import { useParams, Link, useNavigate } from "react-router";
+import { useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { ArrowLeft, Calendar, MapPin, Tag } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
@@ -7,9 +8,17 @@ import { useData } from "./data-store";
 export function PortfolioDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { portfolio } = useData();
+  const { portfolio, trackPortfolioView } = useData();
+  const tracked = useRef(false);
 
   const project = portfolio.find((p) => p.id === id);
+
+  useEffect(() => {
+    if (id && !tracked.current) {
+      tracked.current = true;
+      trackPortfolioView(id);
+    }
+  }, [id, trackPortfolioView]);
 
   if (!project) {
     return (

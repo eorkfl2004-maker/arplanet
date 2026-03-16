@@ -60,15 +60,15 @@ export function ContactSection() {
     } py-4 text-white placeholder:text-white/20 focus:outline-none transition-colors duration-500`;
 
   return (
-    <section id="contact" className="bg-black py-16 md:py-28" ref={ref}>
-      <div className="max-w-6xl mx-auto px-6 md:px-12 lg:px-16">
+    <section id="contact" className="bg-black py-20 md:py-32" ref={ref}>
+      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20">
         <div>
           <motion.p
             initial={{ opacity: 0 }}
             animate={inView ? { opacity: 1 } : {}}
             transition={{ duration: 1 }}
-            className="text-white/30 tracking-[0.4em] mb-6"
-            style={{ fontSize: "11px" }}
+            className="text-white/50 tracking-[0.4em] mb-6"
+            style={{ fontSize: "12px" }}
           >
             GET IN TOUCH
           </motion.p>
@@ -95,7 +95,7 @@ export function ContactSection() {
           >
             <div className="grid md:grid-cols-2 gap-x-8 md:gap-x-12 gap-y-8">
               <div>
-                <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "10px" }}>NAME *</label>
+                <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "11px" }}>NAME *</label>
                 <input
                   type="text"
                   value={form.name}
@@ -108,7 +108,7 @@ export function ContactSection() {
                 />
               </div>
               <div>
-                <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "10px" }}>EMAIL *</label>
+                <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "11px" }}>EMAIL *</label>
                 <input
                   type="email"
                   value={form.email}
@@ -121,7 +121,7 @@ export function ContactSection() {
                 />
               </div>
               <div>
-                <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "10px" }}>PHONE *</label>
+                <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "11px" }}>PHONE *</label>
                 <input
                   type="tel"
                   value={form.phone}
@@ -134,7 +134,7 @@ export function ContactSection() {
                 />
               </div>
               <div>
-                <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "10px" }}>COMPANY / ORGANIZATION *</label>
+                <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "11px" }}>COMPANY / ORGANIZATION *</label>
                 <input
                   type="text"
                   value={form.company}
@@ -149,7 +149,7 @@ export function ContactSection() {
             </div>
 
             <div className="mt-8">
-              <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "10px" }}>MESSAGE *</label>
+              <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "11px" }}>MESSAGE *</label>
               <textarea
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
@@ -164,7 +164,7 @@ export function ContactSection() {
 
             <div className="mt-10 flex justify-end">
               <button type="submit" disabled={sending} className="group flex items-center gap-3 cursor-pointer disabled:opacity-50">
-                <span className="text-white tracking-[0.15em] group-hover:opacity-60 transition-opacity duration-500" style={{ fontSize: "13px", fontWeight: 400 }}>
+                <span className="text-white tracking-[0.15em] group-hover:opacity-60 transition-opacity duration-500" style={{ fontSize: "14px", fontWeight: 400 }}>
                   {sending ? "SENDING..." : "SEND MESSAGE"}
                 </span>
                 <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center group-hover:bg-white group-hover:border-white transition-all duration-500">
