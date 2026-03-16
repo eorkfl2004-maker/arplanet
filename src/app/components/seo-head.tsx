@@ -7,6 +7,7 @@ interface SEOProps {
   image?: string;
   url?: string;
   type?: string;
+  jsonLd?: Record<string, unknown>;
 }
 
 /**
@@ -27,6 +28,7 @@ export function SEOHead({
   image,
   url,
   type = "website",
+  jsonLd,
 }: SEOProps) {
   const { ogImage: storedOgImage } = useData();
 
@@ -72,7 +74,28 @@ export function SEOHead({
 
     // 네이버 서치어드바이저 호환
     setMeta("name", "robots", "index, follow");
-  }, [title, description, image, url, type, storedOgImage]);
+
+    // Canonical URL 동적 업데이트
+    let canonicalEl = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonicalEl) {
+      canonicalEl = document.createElement("link");
+      canonicalEl.setAttribute("rel", "canonical");
+      document.head.appendChild(canonicalEl);
+    }
+    canonicalEl.setAttribute("href", siteUrl);
+
+    // JSON-LD 구조화 데이터 동적 업데이트
+    if (jsonLd) {
+      let scriptEl = document.querySelector('script[data-seo-jsonld]') as HTMLScriptElement | null;
+      if (!scriptEl) {
+        scriptEl = document.createElement("script");
+        scriptEl.setAttribute("type", "application/ld+json");
+        scriptEl.setAttribute("data-seo-jsonld", "true");
+        document.head.appendChild(scriptEl);
+      }
+      scriptEl.textContent = JSON.stringify(jsonLd);
+    }
+  }, [title, description, image, url, type, storedOgImage, jsonLd]);
 
   return null;
 }

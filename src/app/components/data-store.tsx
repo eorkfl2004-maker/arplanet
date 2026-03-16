@@ -437,17 +437,27 @@ const ALL_KEYS = [
   "heroSlides", "posts", "portfolio", "services", "inquiries",
   "companyInfo", "aboutData", "adminPassword", "artists", "awards",
   "currentProjects", "kakaoChannelUrl", "siteLogo", "kakaoLogo", "ogImage",
-  "adminAccounts", "instagramToken", "analyticsData"
+  "adminAccounts", "instagramToken"
 ];
+
+// analyticsData는 서버에 저장하지 않으므로 별도 관리
+const LOCAL_ONLY_KEYS = ["analyticsData"];
 
 export async function exportAllData(): Promise<string> {
   try {
     const data = await fetchAllSiteData();
+    // localStorage 전용 키도 내보내기에 포함
+    for (const key of LOCAL_ONLY_KEYS) {
+      try {
+        const raw = localStorage.getItem(`${CACHE_KEY}_${key}`);
+        if (raw) (data as Record<string, unknown>)[key] = JSON.parse(raw);
+      } catch { /* skip */ }
+    }
     return JSON.stringify({ ...data, _exportedAt: new Date().toISOString() }, null, 2);
   } catch {
     // 서버 실패 시 캐시에서 내보내기
     const data: Record<string, unknown> = { _exportedAt: new Date().toISOString() };
-    for (const key of ALL_KEYS) {
+    for (const key of [...ALL_KEYS, ...LOCAL_ONLY_KEYS]) {
       try {
         const raw = localStorage.getItem(`${CACHE_KEY}_${key}`);
         if (raw) data[key] = JSON.parse(raw);
@@ -462,12 +472,19 @@ export async function importAllData(json: string): Promise<{ success: boolean; m
     const data = JSON.parse(json);
     if (typeof data !== "object" || data === null) return { success: false, message: "올바른 JSON 형식이 아닙니다." };
 
-    // 서버에 벌크 저장
+    // 서버에 벌크 저장 (서버 허용 키만)
     const payload: Record<string, unknown> = {};
     let count = 0;
     for (const key of ALL_KEYS) {
       if (key in data) {
         payload[key] = data[key];
+        saveToCache(key, data[key]);
+        count++;
+      }
+    }
+    // localStorage 전용 키는 로컬에만 저장
+    for (const key of LOCAL_ONLY_KEYS) {
+      if (key in data) {
         saveToCache(key, data[key]);
         count++;
       }
@@ -489,14 +506,16 @@ export async function importAllData(json: string): Promise<{ success: boolean; m
 
     return { success: true, message: `${count}개 항목이 복원되었습니다. 페이지를 새로고침합니다.` };
   } catch {
-    return { success: false, message: "JSON 파싱에 실패했습니다. 파일을 확인해��세요." };
+    return { success: false, message: "JSON 파싱에 실패했습니다. 파일을 확인해세요." };
   }
 }
 
 export async function clearAllData() {
-  for (const key of ALL_KEYS) {
+  for (const key of [...ALL_KEYS, ...LOCAL_ONLY_KEYS]) {
     try { localStorage.removeItem(`${CACHE_KEY}_${key}`); } catch { /* */ }
-    // 서버에서도 기본값으로 초기화
+  }
+  // 서버 허용 키만 서버에서 초기화
+  for (const key of ALL_KEYS) {
     saveToServer(key, null).catch(() => {});
   }
 }
@@ -529,7 +548,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [ogImage, setOgImage] = useSyncedState<string>("ogImage", "", serverDataRef, hydrated);
   const [adminAccounts, setAdminAccounts] = useSyncedState<AdminAccount[]>("adminAccounts", defaultAdminAccounts, serverDataRef, hydrated);
   const [instagramToken, setInstagramToken] = useSyncedState<string>("instagramToken", "", serverDataRef, hydrated);
-  const [analyticsData, setAnalyticsData] = useSyncedState<AnalyticsData>("analyticsData", defaultAnalyticsData, serverDataRef, hydrated);
+  // analyticsData는 서버 키 제한으로 인해 localStorage에만 저장 (서버 동기화 없음)
+  const [analyticsData, _setAnalyticsData] = useState<AnalyticsData>(() => loadFromCache("analyticsData", defaultAnalyticsData));
+  const setAnalyticsData: React.Dispatch<React.SetStateAction<AnalyticsData>> = useCallback((action) => {
+    _setAnalyticsData((prev) => {
+      const next = typeof action === "function" ? (action as (prev: AnalyticsData) => AnalyticsData)(prev) : action;
+      saveToCache("analyticsData", next);
+      return next;
+    });
+  }, []);
 
   // ─── Analytics 추적 함수 ───
   const trackPageView = useCallback((path: string) => {

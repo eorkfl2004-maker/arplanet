@@ -1,0 +1,10 @@
+# ARPlanet - 아르플래닛
+# https://arplanet.kr
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /login
+
+# Sitemaps
+Sitemap: https://arplanet.kr/sitemap.xml
