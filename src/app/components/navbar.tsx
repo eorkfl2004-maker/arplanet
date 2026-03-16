@@ -85,7 +85,7 @@ export function Navbar() {
               onClick={() => setMobileOpen(!mobileOpen)}
               className="lg:hidden text-white z-10 w-10 h-10 flex items-center justify-center cursor-pointer"
             >
-              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+              <Menu size={22} />
             </button>
           </div>
         </div>
@@ -93,29 +93,51 @@ export function Navbar() {
 
       <AnimatePresence>
         {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="fixed inset-0 z-40 bg-black flex flex-col items-center justify-center"
-          >
-            <nav className="flex flex-col items-center gap-8">
-              {navLinks.map((link, i) => (
-                <motion.button
-                  key={link.label}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: i * 0.08 }}
-                  onClick={() => handleNavClick(link.href)}
-                  className="text-white tracking-[0.3em] cursor-pointer hover:opacity-50 transition-opacity"
-                  style={{ fontSize: "28px", fontWeight: 300 }}
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              onClick={() => setMobileOpen(false)}
+            />
+            {/* Slide-in panel (right 1/3) */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ duration: 0.4, ease: [0.25, 0.1, 0, 1] }}
+              className="fixed top-0 right-0 z-50 h-full w-[75vw] max-w-[320px] bg-black/95 backdrop-blur-xl border-l border-white/[0.06] flex flex-col"
+            >
+              {/* Close button */}
+              <div className="flex items-center justify-end h-20 px-6">
+                <button
+                  onClick={() => setMobileOpen(false)}
+                  className="text-white/50 hover:text-white w-10 h-10 flex items-center justify-center cursor-pointer transition-colors"
                 >
-                  {link.label}
-                </motion.button>
-              ))}
-            </nav>
-          </motion.div>
+                  <X size={22} />
+                </button>
+              </div>
+
+              <nav className="flex flex-col px-8 pt-4 gap-1">
+                {navLinks.map((link, i) => (
+                  <motion.button
+                    key={link.label}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: i * 0.05 }}
+                    onClick={() => handleNavClick(link.href)}
+                    className="text-left text-white/70 tracking-[0.2em] cursor-pointer hover:text-white hover:bg-white/[0.04] transition-all py-4 px-3 border-b border-white/[0.04]"
+                    style={{ fontSize: "14px", fontWeight: 300 }}
+                  >
+                    {link.label}
+                  </motion.button>
+                ))}
+              </nav>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>

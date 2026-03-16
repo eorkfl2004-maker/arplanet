@@ -4,30 +4,54 @@ import { useInView } from "./hooks/use-in-view";
 import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useData } from "./data-store";
+import { projectId, publicAnonKey } from "/utils/supabase/info";
 
 export function ContactSection() {
   const { ref, inView } = useInView(0.1);
   const { setInquiries } = useData();
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "" });
   const [focused, setFocused] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.phone || !form.company || !form.message) {
       toast.error("필수 항목을 입력해주세요.");
       return;
     }
-    setInquiries((prev) => [
-      {
-        id: Date.now().toString(),
-        ...form,
-        date: new Date().toISOString().slice(0, 10).replace(/-/g, "."),
-        read: false,
-      },
-      ...prev,
-    ]);
+    setSending(true);
+    const inquiry = {
+      id: Date.now().toString(),
+      ...form,
+      date: new Date().toISOString().slice(0, 10).replace(/-/g, "."),
+      read: false,
+    };
+
+    // 서버에 문의 저장
+    try {
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-f286b462/inquiry`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${publicAnonKey}`,
+          },
+          body: JSON.stringify(inquiry),
+        }
+      );
+      if (!res.ok) {
+        console.error("Failed to save inquiry to server:", await res.text());
+      }
+    } catch (err) {
+      console.error("Error submitting inquiry:", err);
+    }
+
+    // 로컬 상태에도 반영 (관리자가 같은 세션에서 확인할 수 있도록)
+    setInquiries((prev) => [inquiry, ...prev]);
     toast.success("문의가 접수되었습니다. 빠른 시일 내에 연락드리겠습니다.");
     setForm({ name: "", email: "", phone: "", company: "", message: "" });
+    setSending(false);
   };
 
   const inputClass = (field: string) =>
@@ -139,9 +163,9 @@ export function ContactSection() {
             </div>
 
             <div className="mt-10 flex justify-end">
-              <button type="submit" className="group flex items-center gap-3 cursor-pointer">
+              <button type="submit" disabled={sending} className="group flex items-center gap-3 cursor-pointer disabled:opacity-50">
                 <span className="text-white tracking-[0.15em] group-hover:opacity-60 transition-opacity duration-500" style={{ fontSize: "13px", fontWeight: 400 }}>
-                  SEND MESSAGE
+                  {sending ? "SENDING..." : "SEND MESSAGE"}
                 </span>
                 <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center group-hover:bg-white group-hover:border-white transition-all duration-500">
                   <ArrowRight size={16} className="text-white group-hover:text-black transition-colors duration-500" />

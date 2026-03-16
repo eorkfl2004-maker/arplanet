@@ -5,11 +5,9 @@ import { motion } from "motion/react";
 import { toast } from "sonner";
 import { useData } from "./data-store";
 
-const ADMIN_ID = "a1004";
-
 export function LoginPage() {
   const navigate = useNavigate();
-  const { setIsLoggedIn, adminPassword, siteLogo } = useData();
+  const { setIsLoggedIn, adminPassword, adminAccounts, siteLogo } = useData();
   const logoSrc = siteLogo || "/logo.png";
   const [id, setId] = useState<string>(() => {
     try { return localStorage.getItem("arplanet_saved_id") || ""; } catch { return ""; }
@@ -23,7 +21,11 @@ export function LoginPage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (id === ADMIN_ID && pw === adminPassword) {
+    // 기존 레거시 로그인 (a1004 / adminPassword) 또는 관리자 계정 배열에서 확인
+    const legacyMatch = id === "a1004" && pw === adminPassword;
+    const accountMatch = adminAccounts?.some(acc => acc.username === id && acc.password === pw);
+
+    if (legacyMatch || accountMatch) {
       if (rememberId) {
         try { localStorage.setItem("arplanet_saved_id", id); } catch { /* */ }
       } else {

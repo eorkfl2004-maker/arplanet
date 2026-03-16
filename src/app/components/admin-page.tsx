@@ -11,18 +11,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { useData, type NewsPost, type PortfolioItem, type HeroSlide, type ContentBlock, type ServiceItem, type CompanyInfoData, type AboutData, type ArtistItem, type AwardItem, type CurrentProject, exportAllData, importAllData, clearAllData } from "./data-store";
+import { useData, type NewsPost, type PortfolioItem, type HeroSlide, type ContentBlock, type ServiceItem, type CompanyInfoData, type AboutData, type ArtistItem, type AwardItem, type CurrentProject, type AdminAccount, type InstagramPost, exportAllData, importAllData, clearAllData } from "./data-store";
+import { projectId, publicAnonKey } from "/utils/supabase/info";
 
 type Tab = "dashboard" | "hero" | "about" | "artists" | "currentprojects" | "companyinfo" | "portfolio" | "posts" | "services" | "awards" | "inquiries" | "instagram" | "logos" | "settings";
 
-const instagramPosts = [
-  { id: "ig1", caption: "제1회 정기연주회 현장 #아르플래닛 #클래식", likes: 234, comments: 18, date: "3시간 전", image: "https://images.unsplash.com/photo-1773270834685-e6a4372874be?w=400", synced: true },
-  { id: "ig2", caption: "리허설 현장 #피아노 #rehearsal", likes: 189, comments: 12, date: "1일 전", image: "https://images.unsplash.com/photo-1673523280025-61eeb234a4c1?w=400", synced: true },
-  { id: "ig3", caption: "듀오의 밤 포스터 공개 #콘서트 #듀오", likes: 312, comments: 27, date: "2일 전", image: "https://images.unsplash.com/photo-1765279256966-3bf83d01c672?w=400", synced: false },
-  { id: "ig4", caption: "기록 전시 준비중 #전시 #아트", likes: 156, comments: 9, date: "3일 전", image: "https://images.unsplash.com/photo-1755389176283-3cd924205df0?w=400", synced: false },
-  { id: "ig5", caption: "ACC 예술극장에서 #공연 #ACC", likes: 423, comments: 34, date: "5일 전", image: "https://images.unsplash.com/photo-1665002136015-9ad4e54c9a40?w=400", synced: true },
-  { id: "ig6", caption: "광주문화재단 목요콘서트 #협업 #문화재단", likes: 278, comments: 21, date: "1주 전", image: "https://images.unsplash.com/photo-1761173084851-1e5302e931fe?w=400", synced: true },
-];
+// Instagram posts are now fetched from the API
 
 /* ───────── Blog Content Block Editor ───────── */
 function BlogEditor({ blocks, onChange }: { blocks: ContentBlock[]; onChange: (b: ContentBlock[]) => void }) {
@@ -135,7 +129,7 @@ function BlogEditor({ blocks, onChange }: { blocks: ContentBlock[]; onChange: (b
 /* ───────── Admin Page ───────── */
 export function AdminPage() {
   const navigate = useNavigate();
-  const { heroSlides, setHeroSlides, posts, setPosts, portfolio, setPortfolio, services, setServices, inquiries, setInquiries, isLoggedIn, setIsLoggedIn, companyInfo, setCompanyInfo, aboutData, setAboutData, adminPassword, setAdminPassword, artists, setArtists, awards, setAwards, currentProjects, setCurrentProjects, kakaoChannelUrl, setKakaoChannelUrl, siteLogo, setSiteLogo, kakaoLogo, setKakaoLogo, ogImage, setOgImage } = useData();
+  const { heroSlides, setHeroSlides, posts, setPosts, portfolio, setPortfolio, services, setServices, inquiries, setInquiries, isLoggedIn, setIsLoggedIn, companyInfo, setCompanyInfo, aboutData, setAboutData, adminPassword, setAdminPassword, artists, setArtists, awards, setAwards, currentProjects, setCurrentProjects, kakaoChannelUrl, setKakaoChannelUrl, siteLogo, setSiteLogo, kakaoLogo, setKakaoLogo, ogImage, setOgImage, adminAccounts, setAdminAccounts, instagramToken, setInstagramToken } = useData();
 
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [showEditor, setShowEditor] = useState(false);
@@ -151,6 +145,44 @@ export function AdminPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const heroFileInputRef = useRef<HTMLInputElement>(null);
   const [igSettings, setIgSettings] = useState({ autoSync: true, storySync: false, hashtagFilter: true });
+
+  // Admin accounts
+  const [showAdminForm, setShowAdminForm] = useState(false);
+  const [newAdmin, setNewAdmin] = useState({ username: "", password: "", name: "", role: "admin" as "admin" | "superadmin" });
+  const [editingAdmin, setEditingAdmin] = useState<AdminAccount | null>(null);
+
+  // Instagram
+  const [igPosts, setIgPosts] = useState<InstagramPost[]>([]);
+  const [igLoading, setIgLoading] = useState(false);
+  const [igError, setIgError] = useState("");
+  const [editingIgToken, setEditingIgToken] = useState("");
+
+  const fetchInstagramFeed = async () => {
+    setIgLoading(true);
+    setIgError("");
+    try {
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-f286b462/instagram-feed?limit=12`,
+        { headers: { Authorization: `Bearer ${publicAnonKey}` } }
+      );
+      const data = await res.json();
+      if (data.error && !data.posts?.length) {
+        setIgError(data.error);
+      }
+      setIgPosts(data.posts || []);
+    } catch (err) {
+      console.error("Failed to fetch Instagram:", err);
+      setIgError("인스타그램 피드를 불러올 수 없습니다.");
+    } finally {
+      setIgLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "instagram" && instagramToken) {
+      fetchInstagramFeed();
+    }
+  }, [activeTab, instagramToken]);
 
   // Hero
   const [showHeroForm, setShowHeroForm] = useState(false);
@@ -1128,23 +1160,145 @@ export function AdminPage() {
           {/* ═══ INSTAGRAM ═══ */}
           {activeTab === "instagram" && (
             <div>
-              <div className="flex items-center justify-between mb-10"><div><h1 className="text-white mb-2" style={{ fontSize: "24px", fontWeight: 600 }}>인스타그램 연동</h1><p className="text-white/30" style={{ fontSize: "13px" }}>인스타그램 콘텐츠를 자동으로 홈페이지에 연동합니다.</p></div><button onClick={() => toast.success("인스타그램 피드가 동기화되었습니다.")} className="flex items-center gap-2 px-5 py-2.5 border border-white/10 text-white/50 hover:text-white hover:border-white/30 transition-all cursor-pointer" style={{ fontSize: "13px" }}><RefreshCw size={14} /> 동기화</button></div>
-              <div className="p-5 border border-[#E4405F]/20 bg-[#E4405F]/[0.03] mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4"><div className="flex items-center gap-4"><div className="w-11 h-11 bg-gradient-to-br from-[#E4405F] to-[#C13584] flex items-center justify-center shrink-0"><Instagram size={20} className="text-white" /></div><div><p className="text-white flex items-center gap-2" style={{ fontSize: "14px", fontWeight: 500 }}>@arplanet_ <ExternalLink size={12} className="text-white/30" /></p><p className="text-white/30" style={{ fontSize: "11px" }}>마지막 동기화: 1시간 전</p></div></div><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" /><span className="text-green-400/70" style={{ fontSize: "12px", fontWeight: 500 }}>연결됨</span></div></div>
-              <div className="mb-10"><h3 className="text-white/50 tracking-[0.15em] mb-6" style={{ fontSize: "11px", fontWeight: 500 }}>최근 게시물</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {instagramPosts.map(post => (
-                    <div key={post.id} className="border border-white/[0.06] overflow-hidden group">
-                      <div className="aspect-square overflow-hidden relative"><ImageWithFallback src={post.image} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" /><div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors duration-300 flex items-center justify-center gap-4"><span className="text-white opacity-0 group-hover:opacity-100 transition-opacity" style={{ fontSize: "12px" }}>♥ {post.likes}</span><span className="text-white opacity-0 group-hover:opacity-100 transition-opacity" style={{ fontSize: "12px" }}>💬 {post.comments}</span></div>{post.synced && <div className="absolute top-3 right-3"><div className="w-5 h-5 bg-green-500/20 flex items-center justify-center"><Check size={10} className="text-green-400" /></div></div>}</div>
-                      <div className="p-4"><p className="text-white/50 truncate mb-2" style={{ fontSize: "12px" }}>{post.caption}</p><div className="flex items-center justify-between"><span className="text-white/20" style={{ fontSize: "11px" }}>{post.date}</span><span className={`px-2 py-0.5 ${post.synced ? "bg-green-500/10 text-green-400/60" : "bg-white/5 text-white/25"}`} style={{ fontSize: "9px" }}>{post.synced ? "연동됨" : "미연동"}</span></div></div>
+              <div className="flex items-center justify-between mb-10">
+                <div>
+                  <h1 className="text-white mb-2" style={{ fontSize: "24px", fontWeight: 600 }}>인스타그램 연동</h1>
+                  <p className="text-white/30" style={{ fontSize: "13px" }}>인스타그램 콘텐츠를 실시간으로 홈페이지에 연동합니다.</p>
+                </div>
+                {instagramToken && (
+                  <button onClick={fetchInstagramFeed} disabled={igLoading} className="flex items-center gap-2 px-5 py-2.5 border border-white/10 text-white/50 hover:text-white hover:border-white/30 transition-all cursor-pointer disabled:opacity-30" style={{ fontSize: "13px" }}>
+                    <RefreshCw size={14} className={igLoading ? "animate-spin" : ""} /> 새로고침
+                  </button>
+                )}
+              </div>
+
+              {/* Access Token Settings */}
+              <div className="border border-white/[0.06] p-6 md:p-8 mb-10">
+                <h3 className="text-white mb-2" style={{ fontSize: "14px", fontWeight: 500 }}>Instagram Graph API 연결</h3>
+                <p className="text-white/20 mb-6" style={{ fontSize: "12px" }}>
+                  Instagram Graph API의 액세스 토큰을 입력하면 인스타그램 게시물을 불러옵니다.
+                </p>
+
+                {instagramToken ? (
+                  <div className="p-4 bg-[#E4405F]/[0.05] border border-[#E4405F]/20 mb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-br from-[#E4405F] to-[#C13584] flex items-center justify-center shrink-0">
+                          <Instagram size={16} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-white flex items-center gap-2" style={{ fontSize: "13px", fontWeight: 500 }}>
+                            Instagram 연결됨
+                          </p>
+                          <p className="text-white/30" style={{ fontSize: "11px" }}>토큰: {instagramToken.slice(0, 20)}...</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                        <span className="text-green-400/70" style={{ fontSize: "12px", fontWeight: 500 }}>연결됨</span>
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-white/[0.02] border border-white/[0.06] mb-4">
+                    <p className="text-white/30" style={{ fontSize: "12px" }}>아직 연결되지 않았습니다. 아래에 액세스 토큰을 입력해주세요.</p>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={editingIgToken || instagramToken}
+                    onChange={(e) => setEditingIgToken(e.target.value)}
+                    placeholder="Instagram Graph API Access Token"
+                    className="flex-1 bg-transparent border-b border-white/10 focus:border-white/40 py-3 text-white/70 placeholder:text-white/15 focus:outline-none"
+                    style={{ fontSize: "13px", fontWeight: 300 }}
+                  />
+                  <button onClick={() => {
+                    const token = editingIgToken || instagramToken;
+                    if (!token.trim()) { toast.error("토큰을 입력해주세요."); return; }
+                    setInstagramToken(token.trim());
+                    setEditingIgToken("");
+                    toast.success("Instagram 토큰이 저장되었습니다.");
+                  }} className="px-5 py-2 bg-white text-black hover:bg-white/90 transition-colors cursor-pointer shrink-0" style={{ fontSize: "12px", fontWeight: 500 }}>
+                    <Save size={12} className="inline mr-1.5" />저장
+                  </button>
+                </div>
+                {instagramToken && (
+                  <button onClick={() => { setInstagramToken(""); setIgPosts([]); toast.success("연결이 해제되었습니다."); }} className="mt-3 text-red-400/60 hover:text-red-400 transition-colors cursor-pointer" style={{ fontSize: "11px" }}>
+                    연결 해제
+                  </button>
+                )}
+
+                <div className="p-4 bg-white/[0.02] border border-white/[0.04] mt-6">
+                  <p className="text-white/25" style={{ fontSize: "11px", lineHeight: 1.8 }}>
+                    <strong className="text-white/40">토큰 발급 방법:</strong><br />
+                    1. <a href="https://developers.facebook.com" target="_blank" rel="noopener" className="text-white/50 underline">Meta for Developers</a>에서 앱을 생성합니다.<br />
+                    2. Instagram Graph API 제품을 추가합니다.<br />
+                    3. Instagram 비즈니스/크리에이터 계정을 연결합니다.<br />
+                    4. Graph API Explorer에서 <code className="text-white/30 bg-white/[0.05] px-1">instagram_basic</code>, <code className="text-white/30 bg-white/[0.05] px-1">pages_show_list</code> 권한으로 토큰을 발급받습니다.<br />
+                    5. 장기 토큰(60일)으로 교환 후 위에 입력하세요.
+                  </p>
                 </div>
               </div>
-              <div className="border border-white/[0.06] p-6"><h3 className="text-white mb-6" style={{ fontSize: "14px", fontWeight: 500 }}>자동 연동 설정</h3>
-                {[{ key: "autoSync" as const, label: "새 게시물 자동 가져오기", desc: "새 인스타그램 게시물을 자동으로 홈페이지에 표시합니다." }, { key: "storySync" as const, label: "스토리 하이라이트 연동", desc: "인스타그램 스토리 하이라이트를 포트폴리오에 연동합니다." }, { key: "hashtagFilter" as const, label: "해시태그 필터링", desc: "#아르플래닛 해시태그가 포함된 게시물만 가져옵니다." }].map(setting => (
-                  <div key={setting.key} className="flex items-center justify-between py-5 border-b border-white/[0.04] last:border-0"><div><p className="text-white/70" style={{ fontSize: "13px" }}>{setting.label}</p><p className="text-white/20 mt-0.5" style={{ fontSize: "11px" }}>{setting.desc}</p></div><button onClick={() => setIgSettings({ ...igSettings, [setting.key]: !igSettings[setting.key] })} className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors duration-300 shrink-0 ml-4 ${igSettings[setting.key] ? "bg-white" : "bg-white/10"}`}><div className={`absolute top-1 w-4 h-4 rounded-full transition-all duration-300 ${igSettings[setting.key] ? "left-6 bg-black" : "left-1 bg-white/30"}`} /></button></div>
-                ))}
-              </div>
+
+              {/* Posts Grid */}
+              {igError && !igPosts.length && (
+                <div className="p-5 border border-yellow-500/20 bg-yellow-500/[0.03] mb-6">
+                  <p className="text-yellow-400/70" style={{ fontSize: "12px" }}>{igError}</p>
+                </div>
+              )}
+
+              {igLoading ? (
+                <div className="text-center py-20">
+                  <RefreshCw size={24} className="text-white/20 animate-spin mx-auto mb-3" />
+                  <p className="text-white/20" style={{ fontSize: "12px" }}>인스타그램 피드를 불러오는 중...</p>
+                </div>
+              ) : igPosts.length > 0 ? (
+                <div className="mb-10">
+                  <h3 className="text-white/50 tracking-[0.15em] mb-6" style={{ fontSize: "11px", fontWeight: 500 }}>최근 게시물 ({igPosts.length}개)</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {igPosts.map(post => (
+                      <a key={post.id} href={post.permalink} target="_blank" rel="noopener noreferrer" className="border border-white/[0.06] overflow-hidden group block">
+                        <div className="aspect-square overflow-hidden relative">
+                          {post.media_type === "VIDEO" ? (
+                            <video src={post.media_url} className="w-full h-full object-cover" muted />
+                          ) : (
+                            <ImageWithFallback src={post.media_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                          )}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
+                            <ExternalLink size={18} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <p className="text-white/50 truncate mb-2" style={{ fontSize: "12px" }}>{post.caption || "(캡션 없음)"}</p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-white/20" style={{ fontSize: "11px" }}>
+                              {new Date(post.timestamp).toLocaleDateString("ko-KR")}
+                            </span>
+                            <span className="px-2 py-0.5 bg-white/5 text-white/25" style={{ fontSize: "9px" }}>
+                              {post.media_type === "VIDEO" ? "영상" : post.media_type === "CAROUSEL_ALBUM" ? "슬라이드" : "이미지"}
+                            </span>
+                          </div>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : instagramToken ? (
+                <div className="text-center py-20 border border-dashed border-white/[0.06]">
+                  <Instagram size={32} className="text-white/10 mx-auto mb-3" />
+                  <p className="text-white/20" style={{ fontSize: "13px" }}>게시물이 없거나 토큰이 유효하지 않습니다.</p>
+                  <button onClick={fetchInstagramFeed} className="mt-4 text-white/40 hover:text-white transition-colors cursor-pointer" style={{ fontSize: "12px" }}>
+                    다시 시도
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-20 border border-dashed border-white/[0.06]">
+                  <Instagram size={32} className="text-white/10 mx-auto mb-3" />
+                  <p className="text-white/20" style={{ fontSize: "13px" }}>위에서 Instagram 토큰을 입력하면 게시물이 표시됩니다.</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -1269,6 +1423,11 @@ export function AdminPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Save all logos button */}
+              <button onClick={() => { toast.success("로고 설정이 서버에 저장되었습니다."); }} className="flex items-center gap-2 px-8 py-3 bg-white text-black hover:bg-white/90 transition-colors cursor-pointer mt-8" style={{ fontSize: "13px", fontWeight: 500 }}>
+                <Save size={14} /> 로고 저장하기
+              </button>
             </div>
           )}
 
@@ -1308,8 +1467,8 @@ export function AdminPage() {
                     {/* Export */}
                     <div className="flex flex-col sm:flex-row gap-3">
                       <button
-                        onClick={() => {
-                          const json = exportAllData();
+                        onClick={async () => {
+                          const json = await exportAllData();
                           const blob = new Blob([json], { type: "application/json" });
                           const url = URL.createObjectURL(blob);
                           const a = document.createElement("a");
@@ -1335,8 +1494,8 @@ export function AdminPage() {
                           const file = e.target.files?.[0];
                           if (!file) return;
                           const reader = new FileReader();
-                          reader.onload = () => {
-                            const result = importAllData(reader.result as string);
+                          reader.onload = async () => {
+                            const result = await importAllData(reader.result as string);
                             if (result.success) {
                               toast.success(result.message);
                               setTimeout(() => window.location.reload(), 1000);
@@ -1371,7 +1530,7 @@ export function AdminPage() {
                         <div className="flex items-center gap-3">
                           <span className="text-red-400/70" style={{ fontSize: "11px" }}>정말 초기화하시겠습니까? 모든 커스텀 데이터가 삭제됩니다.</span>
                           <button
-                            onClick={() => { clearAllData(); toast.success("초기화되었습니다. 새로고침합니다."); setTimeout(() => window.location.reload(), 800); }}
+                            onClick={async () => { await clearAllData(); toast.success("초기화되었습니다. 새로고침합니다."); setTimeout(() => window.location.reload(), 800); }}
                             className="px-3 py-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer"
                             style={{ fontSize: "11px", fontWeight: 500 }}
                           >
@@ -1402,9 +1561,110 @@ export function AdminPage() {
                   </div>
                 </div>
 
+                {/* Admin Accounts Management */}
+                <div className="border border-white/[0.06] p-6 md:p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h3 className="text-white" style={{ fontSize: "14px", fontWeight: 500 }}>관리자 계정 관리</h3>
+                      <p className="text-white/20 mt-1" style={{ fontSize: "11px" }}>여러 관리자를 추가하고 관리합니다.</p>
+                    </div>
+                    <button onClick={() => { setShowAdminForm(true); setEditingAdmin(null); setNewAdmin({ username: "", password: "", name: "", role: "admin" }); }} className="flex items-center gap-2 px-4 py-2 bg-white text-black hover:bg-white/90 transition-colors cursor-pointer" style={{ fontSize: "12px", fontWeight: 500 }}>
+                      <Plus size={14} /> 관리자 추가
+                    </button>
+                  </div>
+
+                  {/* Existing admins list */}
+                  <div className="space-y-3 mb-6">
+                    {/* Legacy admin */}
+                    <div className="flex items-center justify-between p-4 border border-white/[0.06] bg-white/[0.02]">
+                      <div className="flex items-center gap-4">
+                        <div className="w-9 h-9 bg-white/[0.08] flex items-center justify-center shrink-0">
+                          <Users size={14} className="text-white/40" />
+                        </div>
+                        <div>
+                          <p className="text-white" style={{ fontSize: "13px", fontWeight: 500 }}>기본 관리자</p>
+                          <p className="text-white/30" style={{ fontSize: "11px" }}>ID: a1004 (레거시)</p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-1 bg-amber-500/10 text-amber-400/70" style={{ fontSize: "10px", fontWeight: 500 }}>SUPER</span>
+                    </div>
+
+                    {(adminAccounts || []).map(acc => (
+                      <div key={acc.id} className="flex items-center justify-between p-4 border border-white/[0.06]">
+                        <div className="flex items-center gap-4">
+                          <div className="w-9 h-9 bg-white/[0.05] flex items-center justify-center shrink-0">
+                            <Users size={14} className="text-white/30" />
+                          </div>
+                          <div>
+                            <p className="text-white" style={{ fontSize: "13px", fontWeight: 500 }}>{acc.name || acc.username}</p>
+                            <p className="text-white/30" style={{ fontSize: "11px" }}>ID: {acc.username} · {new Date(acc.createdAt).toLocaleDateString("ko-KR")}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 ${acc.role === "superadmin" ? "bg-amber-500/10 text-amber-400/70" : "bg-white/5 text-white/30"}`} style={{ fontSize: "10px", fontWeight: 500 }}>
+                            {acc.role === "superadmin" ? "SUPER" : "ADMIN"}
+                          </span>
+                          <button onClick={() => { setEditingAdmin(acc); setNewAdmin({ username: acc.username, password: acc.password, name: acc.name, role: acc.role }); setShowAdminForm(true); }} className="p-1.5 text-white/20 hover:text-white/60 transition-colors cursor-pointer"><Edit3 size={12} /></button>
+                          <button onClick={() => { setAdminAccounts(prev => prev.filter(a => a.id !== acc.id)); toast.success("관리자가 삭제되었습니다."); }} className="p-1.5 text-white/20 hover:text-red-400/70 transition-colors cursor-pointer"><Trash2 size={12} /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add/Edit admin form */}
+                  {showAdminForm && (
+                    <div className="border border-white/[0.08] bg-white/[0.02] p-6 space-y-4">
+                      <h4 className="text-white/50 tracking-[0.15em]" style={{ fontSize: "10px", fontWeight: 500 }}>{editingAdmin ? "관리자 수정" : "새 관리자 추가"}</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "10px", fontWeight: 500 }}>아이디 *</label>
+                          <input type="text" value={newAdmin.username} onChange={e => setNewAdmin({ ...newAdmin, username: e.target.value })} className="w-full bg-transparent border-b border-white/10 focus:border-white/40 py-3 text-white/70 placeholder:text-white/15 focus:outline-none" placeholder="로그인 아이디" style={{ fontSize: "13px", fontWeight: 300 }} />
+                        </div>
+                        <div>
+                          <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "10px", fontWeight: 500 }}>비밀번호 *</label>
+                          <input type="text" value={newAdmin.password} onChange={e => setNewAdmin({ ...newAdmin, password: e.target.value })} className="w-full bg-transparent border-b border-white/10 focus:border-white/40 py-3 text-white/70 placeholder:text-white/15 focus:outline-none" placeholder="비밀번호" style={{ fontSize: "13px", fontWeight: 300 }} />
+                        </div>
+                        <div>
+                          <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "10px", fontWeight: 500 }}>이름</label>
+                          <input type="text" value={newAdmin.name} onChange={e => setNewAdmin({ ...newAdmin, name: e.target.value })} className="w-full bg-transparent border-b border-white/10 focus:border-white/40 py-3 text-white/70 placeholder:text-white/15 focus:outline-none" placeholder="표시 이름" style={{ fontSize: "13px", fontWeight: 300 }} />
+                        </div>
+                        <div>
+                          <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "10px", fontWeight: 500 }}>권한</label>
+                          <select value={newAdmin.role} onChange={e => setNewAdmin({ ...newAdmin, role: e.target.value as "admin" | "superadmin" })} className="w-full bg-transparent border-b border-white/10 focus:border-white/40 py-3 text-white/70 focus:outline-none" style={{ fontSize: "13px", fontWeight: 300 }}>
+                            <option value="admin" className="bg-black">일반 관리자</option>
+                            <option value="superadmin" className="bg-black">슈퍼 관리자</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex gap-3 pt-2">
+                        <button onClick={() => {
+                          if (!newAdmin.username.trim() || !newAdmin.password.trim()) { toast.error("아이디와 비밀번호를 입력해주세요."); return; }
+                          if (editingAdmin) {
+                            setAdminAccounts(prev => prev.map(a => a.id === editingAdmin.id ? { ...a, username: newAdmin.username, password: newAdmin.password, name: newAdmin.name, role: newAdmin.role } : a));
+                            toast.success("관리자 정보가 수정되었습니다.");
+                          } else {
+                            const exists = (adminAccounts || []).some(a => a.username === newAdmin.username) || newAdmin.username === "a1004";
+                            if (exists) { toast.error("이미 존재하는 아이디입니다."); return; }
+                            setAdminAccounts(prev => [...prev, { id: Date.now().toString(), username: newAdmin.username, password: newAdmin.password, name: newAdmin.name, role: newAdmin.role, createdAt: new Date().toISOString() }]);
+                            toast.success("새 관리자가 추가되었습니다.");
+                          }
+                          setShowAdminForm(false);
+                          setEditingAdmin(null);
+                        }} className="px-5 py-2 bg-white text-black hover:bg-white/90 transition-colors cursor-pointer" style={{ fontSize: "12px", fontWeight: 500 }}>
+                          <Save size={12} className="inline mr-1.5" />{editingAdmin ? "수정" : "추가"}
+                        </button>
+                        <button onClick={() => { setShowAdminForm(false); setEditingAdmin(null); }} className="px-5 py-2 border border-white/[0.08] text-white/40 hover:text-white transition-colors cursor-pointer" style={{ fontSize: "12px", fontWeight: 500 }}>
+                          취소
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Password Change */}
                 <div className="border border-white/[0.06] p-6 md:p-8">
-                  <h3 className="text-white mb-6" style={{ fontSize: "14px", fontWeight: 500 }}>비밀번호 변경</h3>
+                  <h3 className="text-white mb-6" style={{ fontSize: "14px", fontWeight: 500 }}>레거시 비밀번호 변경</h3>
+                  <p className="text-white/20 mb-4" style={{ fontSize: "11px" }}>기본 관리자(a1004)의 비밀번호를 변경합니다.</p>
                   <div className="space-y-6">
                     <div>
                       <label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "10px", fontWeight: 500 }}>현재 비밀번호</label>

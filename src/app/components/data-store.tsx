@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react";
+import { projectId, publicAnonKey } from "/utils/supabase/info";
 
 export interface HeroSlide {
   id: string;
@@ -122,6 +123,25 @@ export interface AboutData {
   achievements: AboutAchievement[];
 }
 
+export interface AdminAccount {
+  id: string;
+  username: string;
+  password: string;
+  name: string;
+  role: "superadmin" | "admin";
+  createdAt: string;
+}
+
+export interface InstagramPost {
+  id: string;
+  caption?: string;
+  media_type: string;
+  media_url: string;
+  thumbnail_url?: string;
+  permalink: string;
+  timestamp: string;
+}
+
 interface DataStore {
   heroSlides: HeroSlide[];
   setHeroSlides: React.Dispatch<React.SetStateAction<HeroSlide[]>>;
@@ -155,6 +175,11 @@ interface DataStore {
   setKakaoLogo: React.Dispatch<React.SetStateAction<string>>;
   ogImage: string;
   setOgImage: React.Dispatch<React.SetStateAction<string>>;
+  adminAccounts: AdminAccount[];
+  setAdminAccounts: React.Dispatch<React.SetStateAction<AdminAccount[]>>;
+  instagramToken: string;
+  setInstagramToken: React.Dispatch<React.SetStateAction<string>>;
+  dataLoaded: boolean;
 }
 
 // Stable context across HMR — reuse existing context if already created
@@ -165,6 +190,64 @@ if (!_global[CONTEXT_KEY]) {
 }
 const DataContext = _global[CONTEXT_KEY] as React.Context<DataStore | null>;
 
+// ─── API 헬퍼 ───
+const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-f286b462`;
+
+async function fetchAllSiteData(): Promise<Record<string, unknown>> {
+  try {
+    const res = await fetch(`${API_BASE}/site-data`, {
+      headers: { Authorization: `Bearer ${publicAnonKey}` },
+    });
+    if (!res.ok) {
+      console.error("Failed to fetch site data:", res.status, await res.text());
+      return {};
+    }
+    return await res.json();
+  } catch (err) {
+    console.error("Error fetching site data from server:", err);
+    return {};
+  }
+}
+
+async function saveToServer(key: string, value: unknown): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/site-data/${key}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${publicAnonKey}`,
+      },
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) {
+      console.error(`Failed to save ${key} to server:`, res.status, await res.text());
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error(`Error saving ${key} to server:`, err);
+    return false;
+  }
+}
+
+// ─── localStorage 캐시 헬퍼 (빠른 초기 렌더링용) ───
+const CACHE_KEY = "arplanet_cache";
+
+function loadFromCache<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(`${CACHE_KEY}_${key}`);
+    if (raw) return JSON.parse(raw) as T;
+  } catch { /* ignore */ }
+  return fallback;
+}
+
+function saveToCache<T>(key: string, value: T) {
+  try {
+    localStorage.setItem(`${CACHE_KEY}_${key}`, JSON.stringify(value));
+  } catch { /* storage full or unavailable */ }
+}
+
+// ─── 기본값 ───
 const defaultHeroSlides: HeroSlide[] = [
   {
     id: "h1",
@@ -251,81 +334,53 @@ const defaultAboutData: AboutData = {
   ],
 };
 
-// ─── localStorage 연동 헬퍼 ───
-const STORAGE_KEY = "arplanet_data";
+const defaultArtists: ArtistItem[] = [
+  { id: "a1", name: "최혜지", role: "대표 / 피아니스트", instrument: "Piano", bio: "아르플래닛 대표. 광주 출신 피아니스트로 다수의 독주회 및 앙상블 무대 경험을 보유하고 있습니다.", image: "https://images.unsplash.com/photo-1726748236517-2f1bad4b0cb9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmZW1hbGUlMjBwaWFuaXN0JTIwY2xhc3NpY2FsJTIwbXVzaWMlMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzM1NjM1MzF8MA&ixlib=rb-4.1.0&q=80&w=1080", order: 0, visible: true },
+  { id: "a2", name: "김민호", role: "첼리스트", instrument: "Cello", bio: "섬세하고 깊은 음색으로 관객들에게 감동을 전하는 첼리스트입니다.", image: "", order: 1, visible: true },
+  { id: "a3", name: "안소연", role: "피아니스트", instrument: "Piano", bio: "전남대학교 음악학과 출신으로 다양한 초청 연주 활동을 펼치고 있습니다.", image: "", order: 2, visible: true },
+  { id: "a4", name: "박준영", role: "피아니스트", instrument: "Piano", bio: "다양한 장르를 아우르는 표현력을 지닌 젊은 피아니스트입니다.", image: "", order: 3, visible: true },
+];
 
-// ─── 데이터 버전 관리 ───
-// 스키마가 변경될 때 이 버전을 올리면 마이그레이션이 실행됩니다.
-const DATA_VERSION = 2;
-const VERSION_KEY = `${STORAGE_KEY}_version`;
+const defaultAwards: AwardItem[] = [
+  { id: "aw1", year: "2024", title: "광주문화재단 클래식 음악 공연 지원금", organizer: "광주문화재단", desc: "아르플래닛의 클래식 음악 공연을 지원하는 재단의 지원금을 수상했습니다.", order: 0, visible: true },
+  { id: "aw2", year: "2025", title: "국립아시아문화전당(ACC) 공연 지원금", organizer: "국립아시아문화전당(ACC)", desc: "ACC에서 주최하는 공연 지원금을 수상했습니다.", order: 1, visible: true },
+];
 
-function getCurrentVersion(): number {
-  try {
-    const v = localStorage.getItem(VERSION_KEY);
-    return v ? parseInt(v, 10) : 0;
-  } catch { return 0; }
-}
+const defaultCurrentProjects: CurrentProject[] = [
+  { id: "cp1", title: "아르플래닛 제2회 정기연주회", image: "https://images.unsplash.com/photo-1773270834685-e6a4372874be?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjbGFzc2ljYWwlMjBtdXNpYyUyMGNvbmNlcnQlMjBwaWFubyUyMHN0YWdlfGVufDF8fHx8MTc3MzU1ODU2Nnww&ixlib=rb-4.1.0&q=80&w=1080", reservationLink: "https://example.com/reserve", description: "아르플래닛의 다음 정기연주회를 예약하세요.", date: "2025.06.01", performanceDate: "2025년 6월 1일", performanceDay: "일요일", performanceTime: "오후 3시", active: true, order: 0 },
+  { id: "cp2", title: "아르플래닛 듀오의 밤", image: "https://images.unsplash.com/photo-1765279256966-3bf83d01c672?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaGFtYmVyJTIwbXVzaWMlMjBkdW8lMjBwZXJmb3JtYW5jZXxlbnwxfHx8fDE3NzM1NTg1NzR8MA&ixlib=rb-4.1.0&q=80&w=1080", reservationLink: "https://example.com/reserve", description: "아르플래닛 듀오의 밤을 예약하세요.", date: "2025.07.15", performanceDate: "2025년 7월 15일", performanceDay: "화요일", performanceTime: "오후 7시 30분", active: true, order: 1 },
+];
 
-function setCurrentVersion(v: number) {
-  try { localStorage.setItem(VERSION_KEY, String(v)); } catch { /* */ }
-}
+const defaultAdminAccounts: AdminAccount[] = [];
 
-// 마이그레이션: 기존 데이터에 새 필드를 안전하게 추가
-function migrateData() {
-  const stored = getCurrentVersion();
-  if (stored >= DATA_VERSION) return;
+// ─── 서버 동기화 커스텀 훅 ───
+function useSyncedState<T>(
+  key: string,
+  defaultValue: T,
+  serverDataRef: React.MutableRefObject<Record<string, unknown> | null>,
+  hydrated: boolean,
+): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [state, _setState] = useState<T>(() => loadFromCache(key, defaultValue));
 
-  // v1 → v2: visible 필드 추가 (portfolio, artists, awards)
-  if (stored < 2) {
-    const migrateArray = (key: string) => {
-      try {
-        const raw = localStorage.getItem(`${STORAGE_KEY}_${key}`);
-        if (raw) {
-          const arr = JSON.parse(raw);
-          if (Array.isArray(arr)) {
-            const patched = arr.map((item: Record<string, unknown>) => ({
-              ...item,
-              visible: item.visible !== undefined ? item.visible : true,
-            }));
-            localStorage.setItem(`${STORAGE_KEY}_${key}`, JSON.stringify(patched));
-          }
-        }
-      } catch { /* */ }
-    };
-    migrateArray("portfolio");
-    migrateArray("artists");
-    migrateArray("awards");
-  }
+  // 서버 데이터가 로드되면 상태 업데이트
+  useEffect(() => {
+    if (hydrated && serverDataRef.current && key in serverDataRef.current) {
+      const serverVal = serverDataRef.current[key] as T;
+      _setState(serverVal);
+      saveToCache(key, serverVal);
+    }
+  }, [hydrated, key, serverDataRef]);
 
-  setCurrentVersion(DATA_VERSION);
-}
-
-// 앱 시작 시 마이그레이션 실행
-migrateData();
-
-function loadFromStorage<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(`${STORAGE_KEY}_${key}`);
-    if (raw) return JSON.parse(raw) as T;
-  } catch { /* ignore */ }
-  return fallback;
-}
-
-function saveToStorage<T>(key: string, value: T) {
-  try {
-    localStorage.setItem(`${STORAGE_KEY}_${key}`, JSON.stringify(value));
-  } catch { /* storage full or unavailable */ }
-}
-
-function usePersistedState<T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
-  const [state, _setState] = useState<T>(() => loadFromStorage(key, defaultValue));
-  const setState: React.Dispatch<React.SetStateAction<T>> = (action) => {
+  const setState: React.Dispatch<React.SetStateAction<T>> = useCallback((action) => {
     _setState((prev) => {
       const next = typeof action === "function" ? (action as (prev: T) => T)(prev) : action;
-      saveToStorage(key, next);
+      saveToCache(key, next);
+      // 서버에 비동기 저장 (fire-and-forget)
+      saveToServer(key, next).catch((err) => console.error(`Server sync failed for ${key}:`, err));
       return next;
     });
-  };
+  }, [key]);
+
   return [state, setState];
 }
 
@@ -333,82 +388,159 @@ function usePersistedState<T>(key: string, defaultValue: T): [T, React.Dispatch<
 const ALL_KEYS = [
   "heroSlides", "posts", "portfolio", "services", "inquiries",
   "companyInfo", "aboutData", "adminPassword", "artists", "awards",
-  "currentProjects", "kakaoChannelUrl", "siteLogo", "kakaoLogo", "ogImage"
+  "currentProjects", "kakaoChannelUrl", "siteLogo", "kakaoLogo", "ogImage",
+  "adminAccounts", "instagramToken"
 ];
 
-export function exportAllData(): string {
-  const data: Record<string, unknown> = { _version: DATA_VERSION, _exportedAt: new Date().toISOString() };
-  for (const key of ALL_KEYS) {
-    try {
-      const raw = localStorage.getItem(`${STORAGE_KEY}_${key}`);
-      if (raw) data[key] = JSON.parse(raw);
-    } catch { /* skip */ }
+export async function exportAllData(): Promise<string> {
+  try {
+    const data = await fetchAllSiteData();
+    return JSON.stringify({ ...data, _exportedAt: new Date().toISOString() }, null, 2);
+  } catch {
+    // 서버 실패 시 캐시에서 내보내기
+    const data: Record<string, unknown> = { _exportedAt: new Date().toISOString() };
+    for (const key of ALL_KEYS) {
+      try {
+        const raw = localStorage.getItem(`${CACHE_KEY}_${key}`);
+        if (raw) data[key] = JSON.parse(raw);
+      } catch { /* skip */ }
+    }
+    return JSON.stringify(data, null, 2);
   }
-  return JSON.stringify(data, null, 2);
 }
 
-export function importAllData(json: string): { success: boolean; message: string } {
+export async function importAllData(json: string): Promise<{ success: boolean; message: string }> {
   try {
     const data = JSON.parse(json);
     if (typeof data !== "object" || data === null) return { success: false, message: "올바른 JSON 형식이 아닙니다." };
+
+    // 서버에 벌크 저장
+    const payload: Record<string, unknown> = {};
     let count = 0;
     for (const key of ALL_KEYS) {
       if (key in data) {
-        localStorage.setItem(`${STORAGE_KEY}_${key}`, JSON.stringify(data[key]));
+        payload[key] = data[key];
+        saveToCache(key, data[key]);
         count++;
       }
     }
-    if (data._version) setCurrentVersion(data._version);
+
+    const res = await fetch(`${API_BASE}/site-data`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${publicAnonKey}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      console.error("Bulk import to server failed:", await res.text());
+      return { success: false, message: "서버 저장에 실패했습니다." };
+    }
+
     return { success: true, message: `${count}개 항목이 복원되었습니다. 페이지를 새로고침합니다.` };
   } catch {
     return { success: false, message: "JSON 파싱에 실패했습니다. 파일을 확인해주세요." };
   }
 }
 
-export function clearAllData() {
+export async function clearAllData() {
   for (const key of ALL_KEYS) {
-    try { localStorage.removeItem(`${STORAGE_KEY}_${key}`); } catch { /* */ }
+    try { localStorage.removeItem(`${CACHE_KEY}_${key}`); } catch { /* */ }
+    // 서버에서도 기본값으로 초기화
+    saveToServer(key, null).catch(() => {});
   }
-  try { localStorage.removeItem(VERSION_KEY); } catch { /* */ }
 }
 
 export function hasCustomData(): boolean {
   return ALL_KEYS.some(key => {
-    try { return localStorage.getItem(`${STORAGE_KEY}_${key}`) !== null; } catch { return false; }
+    try { return localStorage.getItem(`${CACHE_KEY}_${key}`) !== null; } catch { return false; }
   });
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [heroSlides, setHeroSlides] = usePersistedState<HeroSlide[]>("heroSlides", defaultHeroSlides);
-  const [posts, setPosts] = usePersistedState<NewsPost[]>("posts", defaultPosts);
-  const [portfolio, setPortfolio] = usePersistedState<PortfolioItem[]>("portfolio", defaultPortfolio);
-  const [services, setServices] = usePersistedState<ServiceItem[]>("services", defaultServices);
-  const [inquiries, setInquiries] = usePersistedState<InquiryItem[]>("inquiries", []);
+  const [hydrated, setHydrated] = useState(false);
+  const serverDataRef = useRef<Record<string, unknown> | null>(null);
+
+  const [heroSlides, setHeroSlides] = useSyncedState<HeroSlide[]>("heroSlides", defaultHeroSlides, serverDataRef, hydrated);
+  const [posts, setPosts] = useSyncedState<NewsPost[]>("posts", defaultPosts, serverDataRef, hydrated);
+  const [portfolio, setPortfolio] = useSyncedState<PortfolioItem[]>("portfolio", defaultPortfolio, serverDataRef, hydrated);
+  const [services, setServices] = useSyncedState<ServiceItem[]>("services", defaultServices, serverDataRef, hydrated);
+  const [inquiries, setInquiries] = useSyncedState<InquiryItem[]>("inquiries", [], serverDataRef, hydrated);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [companyInfo, setCompanyInfo] = usePersistedState<CompanyInfoData>("companyInfo", defaultCompanyInfo);
-  const [aboutData, setAboutData] = usePersistedState<AboutData>("aboutData", defaultAboutData);
-  const [adminPassword, setAdminPassword] = usePersistedState<string>("adminPassword", "1004");
-  const [artists, setArtists] = usePersistedState<ArtistItem[]>("artists", [
-    { id: "a1", name: "최혜지", role: "대표 / 피아니스트", instrument: "Piano", bio: "아르플래닛 대표. 광주 출신 피아니스트로 다수의 독주회 및 앙상블 무대 경험을 보유하고 있습니다.", image: "https://images.unsplash.com/photo-1726748236517-2f1bad4b0cb9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmZW1hbGUlMjBwaWFuaXN0JTIwY2xhc3NpY2FsJTIwbXVzaWMlMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzM1NjM1MzF8MA&ixlib=rb-4.1.0&q=80&w=1080", order: 0, visible: true },
-    { id: "a2", name: "김민호", role: "첼리스트", instrument: "Cello", bio: "섬세하고 깊은 음색으로 관객들에게 감동을 전하는 첼리스트입니다.", image: "https://images.unsplash.com/photo-1702524598856-70c855481d9c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYWxlJTIwY2VsbGlzdCUyMG11c2리카인JTIwcG9ydHJhaXQlMjBkYXJrfGVufDF8fHx8MTc3MzU2MzUzMnww&ixlib=rb-4.1.0&q=80&w=1080", order: 1, visible: true },
-    { id: "a3", name: "안소연", role: "피아니스트", instrument: "Piano", bio: "전남대학교 음악학과 출신으로 다양한 초청 연주 활동을 펼치고 있습니다.", image: "https://images.unsplash.com/photo-1690398832220-de3a89887bd9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmZW1hbGUlMjB2aW9saW5pc3QlMjBjbGFzc2ljYWwlMjBwb3J0cmFpdCUyMGVsZW가느트8ZW58MXx8fHwxNzczNTYzNTMyfDA&ixlib=rb-4.1.0&q=80&w=1080", order: 2, visible: true },
-    { id: "a4", name: "박준영", role: "피아니스트", instrument: "Piano", bio: "다양한 장르를 아우르는 표현력을 지닌 젊은 피아니스트입니다.", image: "https://images.unsplash.com/photo-1681070907979-33fb54f56c53?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYWxlJTIwcGlhbmlzdCUyMGNsYX시카인JTIw무시JTIwZm9ybWFsfGVufDF8fHx8MTc3MzU2MzUzMnww&ixlib=rb-4.1.0&q=80&w=1080", order: 3, visible: true },
-  ]);
-  const [awards, setAwards] = usePersistedState<AwardItem[]>("awards", [
-    { id: "aw1", year: "2024", title: "광주문화재단 클래식 음악 공연 지원금", organizer: "광주문화재단", desc: "아르플래닛의 클래식 음악 공연을 지원하는 재단의 지원금을 수상했습니다.", order: 0, visible: true },
-    { id: "aw2", year: "2025", title: "국립아시아문화전당(ACC) 공연 지원금", organizer: "국립아시아문화전당(ACC)", desc: "ACC에서 주최하는 공연 지원금을 수상했습니다.", order: 1, visible: true },
-  ]);
-  const [currentProjects, setCurrentProjects] = usePersistedState<CurrentProject[]>("currentProjects", [
-    { id: "cp1", title: "아르플래닛 제2회 정기연주회", image: "https://images.unsplash.com/photo-1773270834685-e6a4372874be?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjbGFzc2ljYWwlMjBtdXNpYyUyMGNvbmNlcnQlMjBwaWFubyUyMHN0YWdlfGVufDF8fHx8MTc3MzU1ODU2Nnww&ixlib=rb-4.1.0&q=80&w=1080", reservationLink: "https://example.com/reserve", description: "아르플래닛의 다음 정기연주회를 예약하세요.", date: "2025.06.01", performanceDate: "2025년 6월 1일", performanceDay: "일요일", performanceTime: "오후 3시", active: true, order: 0 },
-    { id: "cp2", title: "아르플래닛 듀오의 밤", image: "https://images.unsplash.com/photo-1765279256966-3bf83d01c672?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaGFtYmVyJTIwbXVzaWMlMjBkdW8lMjBwZXJmb3JtYW5jZXxlbnwxfHx8fDE3NzM1NTg1NzR8MA&ixlib=rb-4.1.0&q=80&w=1080", reservationLink: "https://example.com/reserve", description: "아르플래닛 듀오의 밤을 예약하세요.", date: "2025.07.15", performanceDate: "2025년 7월 15일", performanceDay: "화요일", performanceTime: "오후 7시 30분", active: true, order: 1 },
-  ]);
-  const [kakaoChannelUrl, setKakaoChannelUrl] = usePersistedState<string>("kakaoChannelUrl", "https://open.kakao.com/o/gGzQw6Qc");
-  const [siteLogo, setSiteLogo] = usePersistedState<string>("siteLogo", "");
-  const [kakaoLogo, setKakaoLogo] = usePersistedState<string>("kakaoLogo", "");
-  const [ogImage, setOgImage] = usePersistedState<string>("ogImage", "");
+  const [companyInfo, setCompanyInfo] = useSyncedState<CompanyInfoData>("companyInfo", defaultCompanyInfo, serverDataRef, hydrated);
+  const [aboutData, setAboutData] = useSyncedState<AboutData>("aboutData", defaultAboutData, serverDataRef, hydrated);
+  const [adminPassword, setAdminPassword] = useSyncedState<string>("adminPassword", "1004", serverDataRef, hydrated);
+  const [artists, setArtists] = useSyncedState<ArtistItem[]>("artists", defaultArtists, serverDataRef, hydrated);
+  const [awards, setAwards] = useSyncedState<AwardItem[]>("awards", defaultAwards, serverDataRef, hydrated);
+  const [currentProjects, setCurrentProjects] = useSyncedState<CurrentProject[]>("currentProjects", defaultCurrentProjects, serverDataRef, hydrated);
+  const [kakaoChannelUrl, setKakaoChannelUrl] = useSyncedState<string>("kakaoChannelUrl", "https://open.kakao.com/o/gGzQw6Qc", serverDataRef, hydrated);
+  const [siteLogo, setSiteLogo] = useSyncedState<string>("siteLogo", "", serverDataRef, hydrated);
+  const [kakaoLogo, setKakaoLogo] = useSyncedState<string>("kakaoLogo", "", serverDataRef, hydrated);
+  const [ogImage, setOgImage] = useSyncedState<string>("ogImage", "", serverDataRef, hydrated);
+  const [adminAccounts, setAdminAccounts] = useSyncedState<AdminAccount[]>("adminAccounts", defaultAdminAccounts, serverDataRef, hydrated);
+  const [instagramToken, setInstagramToken] = useSyncedState<string>("instagramToken", "", serverDataRef, hydrated);
+
+  // 서버에서 데이터 로드 (마운트 시 1회)
+  useEffect(() => {
+    let cancelled = false;
+    fetchAllSiteData().then((data) => {
+      if (cancelled) return;
+      if (data && Object.keys(data).length > 0 && !("error" in data)) {
+        serverDataRef.current = data;
+        setHydrated(true);
+        console.log("Site data loaded from Supabase DB:", Object.keys(data).length, "keys");
+      } else {
+        // 서버에 데이터가 없으면 기본값을 서버에 업로드
+        console.log("No data on server, uploading defaults...");
+        const defaults: Record<string, unknown> = {
+          heroSlides: defaultHeroSlides,
+          posts: defaultPosts,
+          portfolio: defaultPortfolio,
+          services: defaultServices,
+          inquiries: [],
+          companyInfo: defaultCompanyInfo,
+          aboutData: defaultAboutData,
+          adminPassword: "1004",
+          artists: defaultArtists,
+          awards: defaultAwards,
+          currentProjects: defaultCurrentProjects,
+          kakaoChannelUrl: "https://open.kakao.com/o/gGzQw6Qc",
+          siteLogo: "",
+          kakaoLogo: "",
+          ogImage: "",
+          adminAccounts: defaultAdminAccounts,
+          instagramToken: "",
+        };
+        fetch(`${API_BASE}/site-data`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${publicAnonKey}`,
+          },
+          body: JSON.stringify(defaults),
+        }).then(() => {
+          console.log("Default data uploaded to server");
+        }).catch((err) => {
+          console.error("Failed to upload defaults:", err);
+        });
+        setHydrated(true);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
-    <DataContext.Provider value={{ heroSlides, setHeroSlides, posts, setPosts, portfolio, setPortfolio, services, setServices, inquiries, setInquiries, isLoggedIn, setIsLoggedIn, companyInfo, setCompanyInfo, aboutData, setAboutData, adminPassword, setAdminPassword, artists, setArtists, awards, setAwards, currentProjects, setCurrentProjects, kakaoChannelUrl, setKakaoChannelUrl, siteLogo, setSiteLogo, kakaoLogo, setKakaoLogo, ogImage, setOgImage }}>
+    <DataContext.Provider value={{
+      heroSlides, setHeroSlides, posts, setPosts, portfolio, setPortfolio,
+      services, setServices, inquiries, setInquiries, isLoggedIn, setIsLoggedIn,
+      companyInfo, setCompanyInfo, aboutData, setAboutData, adminPassword, setAdminPassword,
+      artists, setArtists, awards, setAwards, currentProjects, setCurrentProjects,
+      kakaoChannelUrl, setKakaoChannelUrl, siteLogo, setSiteLogo,
+      kakaoLogo, setKakaoLogo, ogImage, setOgImage, adminAccounts, setAdminAccounts,
+      instagramToken, setInstagramToken, dataLoaded: hydrated,
+    }}>
       {children}
     </DataContext.Provider>
   );
