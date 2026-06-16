@@ -8,7 +8,6 @@ import { useData } from "./data-store";
 export function LoginPage() {
   const navigate = useNavigate();
   const { setIsLoggedIn, adminPassword, adminAccounts, siteLogo } = useData();
-  const logoSrc = siteLogo || "/logo.png";
   const [id, setId] = useState<string>(() => {
     try { return localStorage.getItem("arplanet_saved_id") || ""; } catch { return ""; }
   });
@@ -51,7 +50,13 @@ export function LoginPage() {
       >
         {/* Logo */}
         <div className="text-center mb-12">
-          <img src={logoSrc} alt="ARPLANET" className="h-24 w-auto mx-auto" />
+          {siteLogo ? (
+            <img src={siteLogo} alt="ARPLANET" className="h-24 w-auto mx-auto" />
+          ) : (
+            <span className="text-white tracking-[0.3em]" style={{ fontSize: "20px", fontWeight: 700 }}>
+              ARPLANET
+            </span>
+          )}
           <p className="text-white/20 mt-3 tracking-[0.15em]" style={{ fontSize: "11px" }}>
             ADMIN LOGIN
           </p>
