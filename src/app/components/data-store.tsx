@@ -194,22 +194,32 @@ const DataContext = _global[CONTEXT_KEY] as React.Context<DataStore | null>;
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-f286b462`;
 
 async function fetchAllSiteData(): Promise<Record<string, unknown>> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(`${API_BASE}/site-data`, {
       headers: { Authorization: `Bearer ${publicAnonKey}` },
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     if (!res.ok) {
-      console.error("Failed to fetch site data:", res.status, await res.text());
+      console.log("Failed to fetch site data:", res.status);
       return {};
     }
     return await res.json();
-  } catch (err) {
-    console.error("Error fetching site data from server:", err);
+  } catch (err: unknown) {
+    clearTimeout(timeout);
+    const name = err instanceof Error ? err.name : "";
+    if (name !== "AbortError") {
+      console.log("Server unavailable, using local cache.");
+    }
     return {};
   }
 }
 
 async function saveToServer(key: string, value: unknown): Promise<boolean> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(`${API_BASE}/site-data/${key}`, {
       method: "PUT",
@@ -218,14 +228,16 @@ async function saveToServer(key: string, value: unknown): Promise<boolean> {
         Authorization: `Bearer ${publicAnonKey}`,
       },
       body: JSON.stringify({ value }),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     if (!res.ok) {
-      console.error(`Failed to save ${key} to server:`, res.status, await res.text());
+      console.log(`Failed to save ${key} to server:`, res.status);
       return false;
     }
     return true;
-  } catch (err) {
-    console.error(`Error saving ${key} to server:`, err);
+  } catch {
+    clearTimeout(timeout);
     return false;
   }
 }
@@ -513,6 +525,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
           adminAccounts: defaultAdminAccounts,
           instagramToken: "",
         };
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 8000);
         fetch(`${API_BASE}/site-data`, {
           method: "PUT",
           headers: {
@@ -520,10 +534,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
             Authorization: `Bearer ${publicAnonKey}`,
           },
           body: JSON.stringify(defaults),
+          signal: ctrl.signal,
         }).then(() => {
           console.log("Default data uploaded to server");
-        }).catch((err) => {
-          console.error("Failed to upload defaults:", err);
+        }).catch(() => {
+          console.log("Server not available, running with local defaults.");
         });
         setHydrated(true);
       }
