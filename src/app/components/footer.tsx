@@ -12,7 +12,13 @@ export function Footer() {
         <div className="flex flex-col md:flex-row gap-10 md:gap-8 mb-12">
           {/* Brand */}
           <div className="md:w-1/3">
-            <img src={logoSrc} alt="ARPLANET" className="h-16 md:h-20 w-auto mb-3" />
+            {logoSrc ? (
+              <img src={logoSrc} alt="ARPLANET" className="h-16 md:h-20 w-auto mb-3" />
+            ) : (
+              <span className="text-white tracking-[0.25em] block mb-3" style={{ fontSize: "20px", fontWeight: 700, letterSpacing: "0.3em" }}>
+                ARPLANET
+              </span>
+            )}
             <p className="text-white/20 tracking-[0.05em]" style={{ fontSize: "11px", fontWeight: 300 }}>
               classical music
             </p>

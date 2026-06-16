@@ -64,8 +64,14 @@ export function Navbar() {
       >
         <div className="w-full px-8 md:px-12 lg:px-16">
           <div className="flex items-center justify-between h-20 md:h-24">
-            <Link to="/" className="relative z-10">
-              <img src={logoSrc} alt="ARPLANET" className="h-20 md:h-24 w-auto" />
+            <Link to="/" className="relative z-10 flex flex-col leading-none">
+              {logoSrc ? (
+                <img src={logoSrc} alt="ARPLANET" className="h-20 md:h-24 w-auto" />
+              ) : (
+                <span className="text-white tracking-[0.25em]" style={{ fontSize: "18px", fontWeight: 700, letterSpacing: "0.3em" }}>
+                  ARPLANET
+                </span>
+              )}
             </Link>
 
             <nav className="hidden lg:flex items-center gap-10">
