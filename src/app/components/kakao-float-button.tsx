@@ -35,7 +35,7 @@ export function KakaoFloatButton() {
       rel="noopener noreferrer"
       className="fixed bottom-5 right-5 md:bottom-6 md:right-6 z-50 group"
     >
-      <div className="w-11 h-11 md:w-14 md:h-14 rounded-full overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.3)] group-hover:shadow-[0_6px_24px_rgba(0,0,0,0.4)] group-hover:scale-110 transition-all duration-300">
+      <div className="w-6 h-6 md:w-7 md:h-7 rounded-full overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.3)] group-hover:shadow-[0_6px_24px_rgba(0,0,0,0.4)] group-hover:scale-110 transition-all duration-300">
         <img src={logoSrc} alt="카카오톡 채널" className="w-full h-full object-cover" />
       </div>
     </a>
