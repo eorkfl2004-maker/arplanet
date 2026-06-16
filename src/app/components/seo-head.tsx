@@ -22,7 +22,7 @@ interface SEOProps {
  *    예: https://yourdomain.com/og-image.png
  */
 export function SEOHead({
-  title = "ARPlanet | 아르플래닛",
+  title = "arplanet | 아르플래닛",
   description = "클래식의 새로운 가능성 — 광주광역시 기반 클래식 음악 단체 아르플래닛",
   image,
   url,
@@ -61,7 +61,7 @@ export function SEOHead({
     setMeta("property", "og:image", absoluteImageUrl);
     setMeta("property", "og:url", siteUrl);
     setMeta("property", "og:type", type);
-    setMeta("property", "og:site_name", "ARPlanet | 아르플래닛");
+    setMeta("property", "og:site_name", "arplanet | 아르플래닛");
     setMeta("property", "og:locale", "ko_KR");
 
     // 트위터(X) 카드
