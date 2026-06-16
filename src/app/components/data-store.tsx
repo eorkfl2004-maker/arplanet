@@ -179,6 +179,8 @@ interface DataStore {
   setAdminAccounts: React.Dispatch<React.SetStateAction<AdminAccount[]>>;
   instagramToken: string;
   setInstagramToken: React.Dispatch<React.SetStateAction<string>>;
+  maintenanceMode: boolean;
+  setMaintenanceMode: React.Dispatch<React.SetStateAction<boolean>>;
   dataLoaded: boolean;
 }
 
@@ -401,7 +403,7 @@ const ALL_KEYS = [
   "heroSlides", "posts", "portfolio", "services", "inquiries",
   "companyInfo", "aboutData", "adminPassword", "artists", "awards",
   "currentProjects", "kakaoChannelUrl", "siteLogo", "kakaoLogo", "ogImage",
-  "adminAccounts", "instagramToken"
+  "adminAccounts", "instagramToken", "maintenanceMode"
 ];
 
 export async function exportAllData(): Promise<string> {
@@ -493,6 +495,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [ogImage, setOgImage] = useSyncedState<string>("ogImage", "", serverDataRef, hydrated);
   const [adminAccounts, setAdminAccounts] = useSyncedState<AdminAccount[]>("adminAccounts", defaultAdminAccounts, serverDataRef, hydrated);
   const [instagramToken, setInstagramToken] = useSyncedState<string>("instagramToken", "", serverDataRef, hydrated);
+  const [maintenanceMode, setMaintenanceMode] = useSyncedState<boolean>("maintenanceMode", false, serverDataRef, hydrated);
 
   // 서버에서 데이터 로드 (마운트 시 1회)
   useEffect(() => {
@@ -554,7 +557,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       artists, setArtists, awards, setAwards, currentProjects, setCurrentProjects,
       kakaoChannelUrl, setKakaoChannelUrl, siteLogo, setSiteLogo,
       kakaoLogo, setKakaoLogo, ogImage, setOgImage, adminAccounts, setAdminAccounts,
-      instagramToken, setInstagramToken, dataLoaded: hydrated,
+      instagramToken, setInstagramToken, maintenanceMode, setMaintenanceMode, dataLoaded: hydrated,
     }}>
       {children}
     </DataContext.Provider>

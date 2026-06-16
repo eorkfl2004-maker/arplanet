@@ -129,7 +129,7 @@ function BlogEditor({ blocks, onChange }: { blocks: ContentBlock[]; onChange: (b
 /* ───────── Admin Page ───────── */
 export function AdminPage() {
   const navigate = useNavigate();
-  const { heroSlides, setHeroSlides, posts, setPosts, portfolio, setPortfolio, services, setServices, inquiries, setInquiries, isLoggedIn, setIsLoggedIn, companyInfo, setCompanyInfo, aboutData, setAboutData, adminPassword, setAdminPassword, artists, setArtists, awards, setAwards, currentProjects, setCurrentProjects, kakaoChannelUrl, setKakaoChannelUrl, siteLogo, setSiteLogo, kakaoLogo, setKakaoLogo, ogImage, setOgImage, adminAccounts, setAdminAccounts, instagramToken, setInstagramToken } = useData();
+  const { heroSlides, setHeroSlides, posts, setPosts, portfolio, setPortfolio, services, setServices, inquiries, setInquiries, isLoggedIn, setIsLoggedIn, companyInfo, setCompanyInfo, aboutData, setAboutData, adminPassword, setAdminPassword, artists, setArtists, awards, setAwards, currentProjects, setCurrentProjects, kakaoChannelUrl, setKakaoChannelUrl, siteLogo, setSiteLogo, kakaoLogo, setKakaoLogo, ogImage, setOgImage, adminAccounts, setAdminAccounts, instagramToken, setInstagramToken, maintenanceMode, setMaintenanceMode } = useData();
 
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [showEditor, setShowEditor] = useState(false);
@@ -1437,6 +1437,41 @@ export function AdminPage() {
               <h1 className="text-white mb-2" style={{ fontSize: "24px", fontWeight: 600 }}>설정</h1>
               <p className="text-white/30 mb-10" style={{ fontSize: "13px" }}>사이트 정보, SEO, 보안을 관리합니다.</p>
               <div className="max-w-2xl space-y-8">
+
+                {/* 점검 모드 */}
+                <div className="border border-white/[0.06] p-6 md:p-8">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-white mb-1" style={{ fontSize: "14px", fontWeight: 500 }}>점검 모드</h3>
+                      <p className="text-white/30" style={{ fontSize: "12px" }}>
+                        켜면 방문자에게 &quot;현재 홈페이지 리뉴얼 중입니다.&quot; 화면을 표시합니다.<br />
+                        관리자는 항상 정상 접근 가능합니다.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setMaintenanceMode(!maintenanceMode);
+                        toast.success(maintenanceMode ? "점검 모드가 해제되었습니다." : "점검 모드가 활성화되었습니다.");
+                      }}
+                      className={`relative w-14 h-7 rounded-full transition-colors duration-300 cursor-pointer shrink-0 ml-6 ${
+                        maintenanceMode ? "bg-white" : "bg-white/10"
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-1 w-5 h-5 rounded-full transition-all duration-300 ${
+                          maintenanceMode ? "left-8 bg-black" : "left-1 bg-white/40"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  {maintenanceMode && (
+                    <div className="mt-4 px-4 py-3 bg-white/[0.04] border border-white/[0.08]">
+                      <p className="text-white/50" style={{ fontSize: "12px" }}>
+                        🔴 점검 모드 활성화 중 — 방문자에게 점검 화면이 표시되고 있습니다.
+                      </p>
+                    </div>
+                  )}
+                </div>
                 <div className="border border-white/[0.06] p-6 md:p-8"><h3 className="text-white mb-6" style={{ fontSize: "14px", fontWeight: 500 }}>단체 정보</h3><div className="space-y-6">{[{ label: "단체명", value: "아르플래닛" }, { label: "대표이사", value: "최혜지" }, { label: "주소", value: "광주광역시 북구 대자로 146 3F 146호" }, { label: "설립일", value: "2024년 01월" }].map(field => (<div key={field.label}><label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "10px", fontWeight: 500 }}>{field.label.toUpperCase()}</label><input type="text" defaultValue={field.value} className="w-full bg-transparent border-b border-white/10 focus:border-white/40 py-3 text-white/70 focus:outline-none" style={{ fontSize: "14px", fontWeight: 300 }} /></div>))}</div></div>
                 <div className="border border-white/[0.06] p-6 md:p-8"><h3 className="text-white mb-6" style={{ fontSize: "14px", fontWeight: 500 }}>SNS 링크</h3><div className="space-y-6">{[{ label: "홈페이지", value: "https://arplanet.co.kr/" }, { label: "인스타그램", value: "https://www.instagram.com/arplanet_/" }, { label: "블로그", value: "https://blog.naver.com/arplanet_" }].map(field => (<div key={field.label}><label className="text-white/30 tracking-[0.15em] block mb-2" style={{ fontSize: "10px", fontWeight: 500 }}>{field.label.toUpperCase()}</label><input type="url" defaultValue={field.value} className="w-full bg-transparent border-b border-white/10 focus:border-white/40 py-3 text-white/70 focus:outline-none" style={{ fontSize: "14px", fontWeight: 300 }} /></div>))}</div></div>
 
